@@ -82,3 +82,10 @@ git diff
 # ========================
 # Toujours faire un 'git pull' avant de commencer à travailler.
 # Et un 'git push' après avoir terminé pour sauvegarder sur GitHub.
+
+
+#=========================
+#UTILE PERSO
+#=========================
+
+# Wake up TOUR: wakeonlan 2c:f0:5d:7f:e3:2b
