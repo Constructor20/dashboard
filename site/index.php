@@ -1,1 +1,3 @@
-test for all
+<?php phpinfo() 
+#First push for Main
+?>
