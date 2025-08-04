@@ -1,0 +1,84 @@
+# ========================
+# CONFIGURATION INITIALE
+# ========================
+
+# Définir ton identité (une seule fois)
+git config --global user.name "TonNom"
+git config --global user.email "ton@email.com"
+
+# ========================
+# BRANCHES
+# ========================
+
+# Lister toutes les branches locales
+git branch
+
+# Lister toutes les branches locales et distantes
+git branch -a
+
+# Créer une nouvelle branche (ex: 'work') et s'y positionner
+git checkout -b work
+
+# Basculer sur une branche existante
+git checkout nom_branche
+
+# Supprimer une branche locale
+git branch -d nom_branche        # -d : safe (empêche si pas mergée)
+git branch -D nom_branche        # -D : force la suppression
+
+# Supprimer une branche distante
+git push origin --delete nom_branche
+
+# ========================
+# FUSIONNER DES BRANCHES
+# ========================
+
+# Aller sur la branche de destination (ex: main)
+git checkout main
+
+# Fusionner une autre branche (ex: 'work') dans la branche courante
+git merge work
+
+# ========================
+# TRAVAIL À DISTANCE
+# ========================
+
+# Lier un dossier local à un dépôt GitHub distant
+git remote add origin https://github.com/utilisateur/repo.git
+
+# Modifier l'URL du dépôt distant (si déjà ajouté)
+git remote set-url origin https://github.com/utilisateur/repo.git
+
+# Vérifier les remotes configurés
+git remote -v
+
+# Pousser une nouvelle branche vers GitHub
+git push -u origin nom_branche
+
+# Pousser tous les commits locaux
+git push
+
+# Récupérer les branches/commits distants
+git fetch
+
+# Mettre à jour la branche courante avec le remote
+git pull
+
+# ========================
+# INFOS & AIDE
+# ========================
+
+# Voir l'état du dépôt
+git status
+
+# Voir l'historique des commits
+git log --oneline --graph --all
+
+# Voir les différences locales
+git diff
+
+# ========================
+# REMARQUE
+# ========================
+# Toujours faire un 'git pull' avant de commencer à travailler.
+# Et un 'git push' après avoir terminé pour sauvegarder sur GitHub.
