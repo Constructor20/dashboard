@@ -1,11 +1,22 @@
 FROM node:20-alpine
 
+# Crée le dossier
 WORKDIR /app
 
-COPY . .
+# Copie package.json et package-lock.json
+COPY package*.json ./
 
+# Installe les dépendances
 RUN npm install
 
+# Initialise Tailwind
+RUN npx tailwindcss init -p
+
+# Copie tout le reste du code
+COPY . .
+
+# Expose le port du dev server
 EXPOSE 5173
 
+# Commande par défaut (mode dev)
 CMD ["npm", "run", "dev"]
