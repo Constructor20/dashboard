@@ -1,8 +1,38 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+:root{
+  --bg:#070814;
+  --panel: rgba(255,255,255,0.03);
+  --text: #e6eef8;
+}
 
-body {
-  margin: 0;
-  font-family: sans-serif;
+*{box-sizing:border-box}
+html,body,#root{height:100%;margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial}
+body{background:linear-gradient(180deg,var(--bg),#0b1220);color:var(--text)}
+.app-center{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.container{position:relative;width:calc(min(760px, 90vw));aspect-ratio:1/1;display:flex;align-items:center;justify-content:center}
+svg{width:100%;height:100%}
+.label {
+  position:absolute;
+  pointer-events:none;
+  background: rgba(0,0,0,0.6);
+  color: white;
+  padding:6px 10px;
+  border-radius:8px;
+  font-weight:600;
+  transform-origin:left center;
+  white-space:nowrap;
+  font-size:14px;
+  box-shadow:0 8px 24px rgba(0,0,0,0.6);
+}
+.detail-panel{
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:flex-start; padding-left:28px; pointer-events:auto;
+}
+.panel-card{
+  width:44%; min-width:320px; background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02)); padding:22px; border-radius:12px; box-shadow:0 10px 40px rgba(0,0,0,0.6);
+}
+.button {
+  display:inline-block; padding:8px 12px; border-radius:8px; background:#071028; color:var(--text); border:1px solid rgba(255,255,255,0.04); cursor:pointer;
+}
+@media (max-width:720px){
+  .panel-card{ width:78%; min-width: unset; margin:0 12px}
+  .container{ width: calc(min(520px, 95vw)) }
 }

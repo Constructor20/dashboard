@@ -1,242 +1,196 @@
-// src/components/DashboardCircle.jsx
-import React, { useState, useRef } from "react";
+import React, { useRef, useState } from "react";
 import { motion } from "framer-motion";
+import SectionDetail from "./SectionDetail.jsx";
 
 /**
  * DashboardCircle
- * props:
- *  - sections: [{ name, color, links: [{text, href}, ...] }, ...]
- *  - outerRadius, innerRadius : sizes en px
+ * - sections: array {name,color,links}
+ * - outerRadius / innerRadius in px
  *
- * comportement :
- *  - hover => écarte légèrement la part
- *  - click => animation (3s) : trajectoire type arc vers la gauche + zoom
- *            puis affiche panel detail (sommaire) sur la même page
+ * Implementation notes:
+ * - draws donut sectors with SVG paths
+ * - hover: small radial translation + label shown
+ * - click: animate selected sector toward top-left corner (curve-like feel via x/y keyframes + scale) for duration ~3s
+ *         other sectors fade out
+ * - at animation end the detail panel is shown (same page)
  */
 
-export default function DashboardCircle({
-  sections = null,
-  outerRadius = 240,
-  innerRadius = 110,
-}) {
-  const defaultSections = [
-    { name: "Serveur", color: "#4f46e5", links: [{ text: "NAS", href: "#" }, { text: "Minecraft", href: "#" }] },
-    { name: "Home Assistant", color: "#16a34a", links: [{ text: "Etat maison", href: "#" }, { text: "WOL", href: "#" }] },
-    { name: "Réseau", color: "#eab308", links: [{ text: "Portainer", href: "#" }, { text: "cAdvisor", href: "#" }] },
-    { name: "Pub", color: "#ef4444", links: [{ text: "Portfolio", href: "#" }, { text: "LinkedIn", href: "#" }] },
-    { name: "Coming", color: "#0ea5e9", links: [{ text: "Soon", href: "#" }] },
-  ];
+export default function DashboardCircle({ sections = [], outerRadius = 240, innerRadius = 160 }) {
+  const items = sections;
+  const count = items.length;
+  const center = outerRadius; // svg coordinate center
+  const angleStep = 360 / count;
+  const containerRef = useRef(null);
 
-  const items = sections || defaultSections;
-  const center = outerRadius;
-  const anglePer = 360 / items.length;
   const [hoverIndex, setHoverIndex] = useState(null);
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [showDetail, setShowDetail] = useState(false);
-  const animTimeoutRef = useRef(null);
 
-  // convertit angle en coord cartésiennes
+  // convert degrees to radians then polar -> cartesian
   const polarToCartesian = (cx, cy, r, angleDeg) => {
-    const a = (angleDeg - 90) * (Math.PI / 180);
+    const a = ((angleDeg - 90) * Math.PI) / 180;
     return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) };
   };
 
-  // dessine un segment 'donut' (arc extérieur -> arc intérieur)
+  // make a donut sector path from startAngle to endAngle
   const describeArc = (cx, cy, rOuter, rInner, startAngle, endAngle) => {
     const startOuter = polarToCartesian(cx, cy, rOuter, endAngle);
     const endOuter = polarToCartesian(cx, cy, rOuter, startAngle);
     const startInner = polarToCartesian(cx, cy, rInner, startAngle);
     const endInner = polarToCartesian(cx, cy, rInner, endAngle);
-    const largeArc = endAngle - startAngle <= 180 ? "0" : "1";
-
+    const large = endAngle - startAngle <= 180 ? "0" : "1";
     return [
       `M ${startOuter.x} ${startOuter.y}`,
-      `A ${rOuter} ${rOuter} 0 ${largeArc} 0 ${endOuter.x} ${endOuter.y}`,
+      `A ${rOuter} ${rOuter} 0 ${large} 0 ${endOuter.x} ${endOuter.y}`,
       `L ${startInner.x} ${startInner.y}`,
-      `A ${rInner} ${rInner} 0 ${largeArc} 1 ${endInner.x} ${endInner.y}`,
+      `A ${rInner} ${rInner} 0 ${large} 1 ${endInner.x} ${endInner.y}`,
       "Z",
     ].join(" ");
   };
 
-  // Calcule keyframes x/y pour donner une trajectoire d'arc vers la gauche
-  // on retourne [xKeyframes], [yKeyframes] en px relatifs.
-  const computeArcKeyframes = (midAngle) => {
-    // point central de la part (sur la moyenne radius)
+  // compute small radial offset for hover
+  const computeHoverOffset = (midAngle) => {
     const mid = polarToCartesian(center, center, (outerRadius + innerRadius) / 2, midAngle);
-    const dirX = mid.x - center;
-    const dirY = mid.y - center;
-
-    // step1 : léger écart extérieur (hover-like)
-    const step1 = { x: dirX * 0.12, y: dirY * 0.12 };
-    // step2 : mouvement vers la gauche + légère courbe (milieu)
-    // on veut finir bien à gauche (ex: -outerRadius*1.8) et légèrement haut ou bas dépendant
-    const endX = -outerRadius * 2.2; // assez hors écran à gauche
-    const endY = -dirY * 0.3; // donne une courbure selon la partie
-
-    // keyframes (0 -> step1 -> end)
-    const xKF = [0, step1.x, endX];
-    const yKF = [0, step1.y, endY];
-
-    return { xKF, yKF };
+    const dx = mid.x - center;
+    const dy = mid.y - center;
+    // small outward offset (px)
+    return { x: dx * 0.12, y: dy * 0.12 };
   };
 
-  const onClickPart = (i) => {
-    // annule ancienne animation pending
-    if (animTimeoutRef.current) {
-      clearTimeout(animTimeoutRef.current);
-      animTimeoutRef.current = null;
+  // compute keyframes to "arc" toward corner (top-left here)
+  // we compute relative x/y in svg coords: start at 0, middle small outward step, end at target
+  const computeMoveToCorner = (midAngle) => {
+    // compute small outward vector
+    const mid = polarToCartesian(center, center, (outerRadius + innerRadius) / 2, midAngle);
+    const dx = mid.x - center;
+    const dy = mid.y - center;
+    const step1 = { x: dx * 0.12, y: dy * 0.12 };
+
+    // compute target relative to svg container so the sector ends near top-left of viewport with padding
+    // get container position on screen
+    const rect = containerRef.current?.getBoundingClientRect();
+    // fallback target in svg coords if no rect
+    let targetX = -outerRadius * 1.6;
+    let targetY = -outerRadius * 1.2;
+    if (rect) {
+      // want target at 32px from left and 32px from top of viewport
+      // compute where svg's origin is on screen and convert
+      const svgLeft = rect.left;
+      const svgTop = rect.top;
+      // target in screen coords
+      const screenTargetX = 32;
+      const screenTargetY = 32;
+      // convert to svg-local translation (approx): translateX = screenTargetX - (svgLeft + center)
+      targetX = screenTargetX - (svgLeft + center);
+      targetY = screenTargetY - (svgTop + center);
     }
 
+    // end keyframes
+    const endX = targetX;
+    const endY = targetY;
+
+    // keyframes [start, bump out, end]
+    return {
+      xKF: [0, step1.x, endX],
+      yKF: [0, step1.y, endY],
+    };
+  };
+
+  // when clicking a sector
+  const onClickSector = (i, midAngle) => {
     setSelectedIndex(i);
-    setShowDetail(false); // caché pendant animation
-
-    // après la durée de l'animation (3s), afficher le panneau detail
-    animTimeoutRef.current = setTimeout(() => {
-      setShowDetail(true);
-      animTimeoutRef.current = null;
-    }, 3000); // 3000 ms = durée animation
-  };
-
-  const onCloseDetail = () => {
-    if (animTimeoutRef.current) {
-      clearTimeout(animTimeoutRef.current);
-      animTimeoutRef.current = null;
-    }
     setShowDetail(false);
-    // remettre tout à zéro (retour)
-    setSelectedIndex(null);
+
+    // if containerRef present, compute movement then wait for animation end
+    const { xKF, yKF } = computeMoveToCorner(midAngle);
+
+    // use setTimeout to show detail after animation duration
+    setTimeout(() => {
+      setShowDetail(true);
+    }, 3000);
   };
 
   return (
-    <div className="w-full min-h-screen flex items-center justify-center bg-[#0b1020] text-white">
-      <div style={{ position: "relative", width: outerRadius * 2, height: outerRadius * 2 }}>
-        <svg
-          width={outerRadius * 2}
-          height={outerRadius * 2}
-          viewBox={`0 0 ${outerRadius * 2} ${outerRadius * 2}`}
-          style={{ overflow: "visible", display: "block" }}
-        >
-          {/* centre (optionnel) */}
-          <circle cx={center} cy={center} r={innerRadius - 6} fill="#071026" />
-
-          {items.map((s, idx) => {
-            const start = idx * anglePer;
-            const end = (idx + 1) * anglePer;
+    <>
+      <div ref={containerRef} style={{ width: outerRadius * 2, height: outerRadius * 2, position: "relative" }}>
+        <svg width={outerRadius * 2} height={outerRadius * 2} viewBox={`0 0 ${outerRadius * 2} ${outerRadius * 2}`}>
+          {/* We do not render a filled center: keep it empty to match spec */}
+          {/* draw each sector */}
+          {items.map((it, idx) => {
+            const start = idx * angleStep;
+            const end = (idx + 1) * angleStep;
             const mid = (start + end) / 2;
             const d = describeArc(center, center, outerRadius, innerRadius, start, end);
-
-            // hover offset vector for small separation
-            const midPoint = polarToCartesian(center, center, (outerRadius + innerRadius) / 2, mid);
-            const dirX = midPoint.x - center;
-            const dirY = midPoint.y - center;
-
-            const isHover = hoverIndex === idx;
+            const hoverOffset = computeHoverOffset(mid);
             const isSelected = selectedIndex === idx;
 
-            // compute arc keyframes for clicked animation
-            const { xKF, yKF } = computeArcKeyframes(mid);
+            // compute final keyframes if selected
+            const { xKF, yKF } = computeMoveToCorner(mid);
 
             return (
               <motion.path
-                key={s.name}
+                key={it.name}
                 d={d}
-                fill={s.color}
-                stroke="#0b0f18"
-                strokeWidth={2}
+                fill={it.color}
+                stroke="rgba(0,0,0,0.25)"
+                strokeWidth={1}
                 style={{ transformOrigin: `${center}px ${center}px`, cursor: "pointer" }}
-                // small hover translation outward
+                initial={{ opacity: 1 }}
                 animate={
                   isSelected
-                    ? { x: xKF, y: yKF, scale: [1, 1.1, 2.2] } // keyframes scale too
-                    : isHover
-                    ? { x: dirX * 0.12, y: dirY * 0.12, scale: 1.05 }
-                    : { x: 0, y: 0, scale: 1 }
+                    ? {
+                        x: xKF,
+                        y: yKF,
+                        scale: [1, 1.06, 1.95],
+                        opacity: 1,
+                      }
+                    : hoverIndex != null && hoverIndex !== idx
+                    ? { opacity: 0, scale: 1 } // other sectors fade when one selected/animating
+                    : hoverIndex === idx
+                    ? { x: hoverOffset.x, y: hoverOffset.y, scale: 1.02 }
+                    : { x: 0, y: 0, scale: 1, opacity: 1 }
                 }
                 transition={
                   isSelected
                     ? { x: { duration: 3, ease: "easeInOut" }, y: { duration: 3, ease: "easeInOut" }, scale: { duration: 3, ease: [0.22, 1, 0.36, 1] } }
-                    : { type: "spring", stiffness: 160, damping: 18 }
+                    : { type: "spring", stiffness: 160, damping: 20 }
                 }
                 onMouseEnter={() => setHoverIndex(idx)}
                 onMouseLeave={() => setHoverIndex((h) => (h === idx ? null : h))}
-                onClick={() => onClickPart(idx)}
+                onClick={() => onClickSector(idx, mid)}
               />
             );
           })}
         </svg>
 
-        {/* Sommaire / panel detail (apparaît quand showDetail === true) */}
-        <div
-          aria-hidden={!showDetail}
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            width: outerRadius * 2,
-            height: outerRadius * 2,
-            display: showDetail ? "flex" : "none",
-            alignItems: "center",
-            justifyContent: "flex-start",
-            pointerEvents: showDetail ? "auto" : "none",
-          }}
-        >
-          <div
-            style={{
-              width: "45%",
-              minWidth: 360,
-              marginLeft: 24,
-              background: "linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02))",
-              borderRadius: 12,
-              padding: 24,
-              boxShadow: "0 10px 30px rgba(0,0,0,0.6)",
-              backdropFilter: "blur(6px)",
-            }}
-          >
-            <button
-              onClick={onCloseDetail}
-              style={{
-                padding: "8px 12px",
-                borderRadius: 8,
-                background: "#0b1220",
-                color: "#fff",
-                border: "1px solid rgba(255,255,255,0.05)",
-                cursor: "pointer",
-                marginBottom: 12,
+        {/* label hover (absolute div) */}
+        {hoverIndex != null && (() => {
+          const s = items[hoverIndex];
+          const start = hoverIndex * angleStep;
+          const end = (hoverIndex + 1) * angleStep;
+          const mid = (start + end) / 2;
+          const labelPos = polarToCartesian(center, center, outerRadius + 18, mid);
+          // place label relative to svg container
+          return (
+            <div className="label" style={{ left: labelPos.x + 8, top: labelPos.y - 18 }}>
+              {s.name}
+            </div>
+          );
+        })()}
+
+        {/* detail panel that appears after animation */}
+        {showDetail && selectedIndex != null && (
+          <div className="detail-panel" aria-hidden={!showDetail}>
+            <SectionDetail
+              item={items[selectedIndex]}
+              onClose={() => {
+                setShowDetail(false);
+                setSelectedIndex(null);
               }}
-            >
-              ← Retour
-            </button>
-
-            {selectedIndex != null && (
-              <>
-                <h2 style={{ fontSize: 28, margin: "8px 0 12px 0" }}>{items[selectedIndex].name}</h2>
-                <p style={{ opacity: 0.8, marginBottom: 16 }}>
-                  Sommaire — liens et actions pour <strong>{items[selectedIndex].name}</strong>
-                </p>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {items[selectedIndex].links?.map((l, i) => (
-                    <a
-                      key={i}
-                      href={l.href}
-                      style={{
-                        padding: "10px 12px",
-                        borderRadius: 8,
-                        background: "rgba(255,255,255,0.02)",
-                        color: "#fff",
-                        textDecoration: "none",
-                        border: "1px solid rgba(255,255,255,0.03)",
-                      }}
-                    >
-                      {l.text}
-                    </a>
-                  ))}
-                </div>
-              </>
-            )}
+            />
           </div>
-        </div>
+        )}
       </div>
-    </div>
+    </>
   );
 }

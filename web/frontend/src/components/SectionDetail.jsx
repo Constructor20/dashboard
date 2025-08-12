@@ -1,23 +1,28 @@
 import React from "react";
 import { motion } from "framer-motion";
 
-export default function SectionDetail({ section, onBack }) {
+export default function SectionDetail({ item, onClose }) {
+  if (!item) return null;
+
   return (
     <motion.div
-      className="fixed inset-0 bg-gray-900 flex flex-col items-center justify-center text-white"
-      initial={{ opacity: 0, scale: 0.8 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.8 }}
-      transition={{ duration: 0.5 }}
+      className="panel-card"
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -20 }}
     >
-      <h1 className="text-5xl font-bold mb-6">{section.name}</h1>
-      <p className="text-lg mb-8">Ici tu peux mettre les liens (NAS, Minecraft, etc.)</p>
-      <button
-        onClick={onBack}
-        className="px-6 py-3 bg-blue-600 hover:bg-blue-500 rounded-lg shadow-lg"
-      >
-        Retour
-      </button>
+      <button className="button" onClick={onClose}>← Retour</button>
+
+      <h2 style={{ fontSize: 26, marginTop: 12 }}>{item.name}</h2>
+      <p style={{ opacity: 0.85, marginTop: 8 }}>{`Actions & redirections pour ${item.name}`}</p>
+
+      <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+        {item.links?.map((l, i) => (
+          <a key={i} href={l.href} style={{ padding: "10px 12px", borderRadius: 8, background: "rgba(255,255,255,0.02)", color: "white", textDecoration: "none", border: "1px solid rgba(255,255,255,0.03)" }}>
+            {l.text}
+          </a>
+        ))}
+      </div>
     </motion.div>
   );
 }
