@@ -113,7 +113,7 @@ export default function DashboardCircle({ sections = [], outerRadius = 240, inne
   return (
     <>
       <div ref={containerRef} style={{ width: outerRadius * 2, height: outerRadius * 2, position: "relative" }}>
-        <svg width={outerRadius * 2} height={outerRadius * 2} viewBox={`0 0 ${outerRadius * 2} ${outerRadius * 2}`}>
+        <svg width={outerRadius * 2} height={outerRadius * 2} viewBox={`0 0 ${outerRadius * 2} ${outerRadius * 2}`} style={{ overflow: "visible" }}>
           {/* We do not render a filled center: keep it empty to match spec */}
           {/* draw each sector */}
           {items.map((it, idx) => {
