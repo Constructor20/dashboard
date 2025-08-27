@@ -117,54 +117,57 @@ const computeMoveToCorner = (midAngle) => {
             const hoverOffset = computeHoverOffset(mid);
             const isSelected = selectedIndex === idx;
 
-              // rotation pour viser coin haut-gauche
+            // rotation pour viser coin haut-gauche
             const desiredAngle = 135;
             const rotationDelta = desiredAngle - mid;
-
 
             // compute final keyframes if selected
             const { xKF, yKF } = computeMoveToCorner(mid);
 
             return (
               <motion.path
-                  key={it.name}
-                  d={d}
-                  fill={it.color}
-                  stroke="rgba(0,0,0,0.25)"
-                  strokeWidth={1}
-                  style={{ transformOrigin: `${center}px ${center}px`, cursor: "pointer" }}
-                  initial={{ opacity: 1 }}
-                  animate={
-                    isSelected
-                      ? {
-                          x: xKF,
-                          y: yKF,
-                          scale: [1, 1.06, 1.35],
-                          rotate: [0, rotationDelta],   // → va tourner vers le coin
-                          opacity: 1,
-                        }
-                      : {
-                          x: 0,
-                          y: 0,
-                          scale: 1,
-                          rotate: 0,                    // ← retour à l'endroit
-                          opacity: 1,
-                        }
-                  }
-                  transition={
-                    isSelected
-                      ? {
-                          x: { duration: 3, ease: "easeInOut" },
-                          y: { duration: 3, ease: "easeInOut" },
-                          rotate: { duration: 3, ease: "easeInOut" },
-                          scale: { duration: 3, ease: [0.22, 1, 0.36, 1] },
-                        }
-                      : { type: "spring", stiffness: 160, damping: 20 }
-                  }
-                  onMouseEnter={() => setHoverIndex(idx)}
-                  onMouseLeave={() => setHoverIndex((h) => (h === idx ? null : h))}
-                  onClick={() => onClickSector(idx, mid)}
-                />
+                key={it.name}
+                d={d}
+                fill={it.color}
+                stroke="rgba(0,0,0,0.25)"
+                strokeWidth={1}
+                style={{ transformOrigin: `${center}px ${center}px`, cursor: "pointer" }}
+                initial={{ opacity: 1 }}
+                animate={
+                  isSelected
+                    ? {
+                        x: xKF,
+                        y: yKF,
+                        scale: [1, 1.06, 1.35],
+                        rotate: [0, rotationDelta],
+                        opacity: 1, // ← le secteur choisi reste visible
+                      }
+                    : selectedIndex != null
+                    ? { opacity: 0 } // ← les autres disparaissent
+                    : {
+                        x: 0,
+                        y: 0,
+                        scale: 1,
+                        rotate: 0,
+                        opacity: 1, // ← état normal quand rien n’est sélectionné
+                      }
+                }
+                transition={
+                  isSelected
+                    ? {
+                        x: { duration: 3, ease: "easeInOut" },
+                        y: { duration: 3, ease: "easeInOut" },
+                        rotate: { duration: 3, ease: "easeInOut" },
+                        scale: { duration: 3, ease: [0.22, 1, 0.36, 1] },
+                      }
+                    : selectedIndex != null
+                    ? { duration: 1, ease: "easeOut" } // disparition rapide des autres
+                    : { type: "spring", stiffness: 160, damping: 20 }
+                }
+                onMouseEnter={() => setHoverIndex(idx)}
+                onMouseLeave={() => setHoverIndex((h) => (h === idx ? null : h))}
+                onClick={() => onClickSector(idx, mid)}
+              />
             );
           })}
         </svg>
