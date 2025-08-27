@@ -21,6 +21,7 @@ export default function DashboardCircle({ sections = [], outerRadius = 240, inne
   const center = outerRadius; // svg coordinate center
   const angleStep = 360 / count;
   const containerRef = useRef(null);
+  
 
   const [hoverIndex, setHoverIndex] = useState(null);
   const [selectedIndex, setSelectedIndex] = useState(null);
@@ -59,42 +60,34 @@ export default function DashboardCircle({ sections = [], outerRadius = 240, inne
 
   // compute keyframes to "arc" toward corner (top-left here)
   // we compute relative x/y in svg coords: start at 0, middle small outward step, end at target
-  const computeMoveToCorner = (midAngle) => {
-    // compute small outward vector
-    const mid = polarToCartesian(center, center, (outerRadius + innerRadius) / 2, midAngle);
-    const dx = mid.x - center;
-    const dy = mid.y - center;
-    const step1 = { x: dx * 0.12, y: dy * 0.12 };
+const computeMoveToCorner = (midAngle) => {
+  // coordonnées du milieu du secteur
+  const mid = polarToCartesian(center, center, (outerRadius + innerRadius) / 2, midAngle);
 
-    // compute target relative to svg container so the sector ends near top-left of viewport with padding
-    // get container position on screen
-    const rect = containerRef.current?.getBoundingClientRect();
-    // fallback target in svg coords if no rect
-    let targetX = -outerRadius * 1.6;
-    let targetY = -outerRadius * 1.2;
-    if (rect) {
-      // want target at 32px from left and 32px from top of viewport
-      // compute where svg's origin is on screen and convert
-      const svgLeft = rect.left;
-      const svgTop = rect.top;
-      // target in screen coords
-      const screenTargetX = 32;
-      const screenTargetY = 32;
-      // convert to svg-local translation (approx): translateX = screenTargetX - (svgLeft + center)
-      targetX = screenTargetX - (svgLeft + center);
-      targetY = screenTargetY - (svgTop + center);
-    }
+  // cible absolue dans la page (coin haut-gauche + padding)
+  const padding = 32;
+  const rect = containerRef.current?.getBoundingClientRect();
+  if (!rect) return { xKF: [0, 0], yKF: [0, 0] };
 
-    // end keyframes
-    const endX = targetX;
-    const endY = targetY;
+  const svgLeft = rect.left;
+  const svgTop = rect.top;
 
-    // keyframes [start, bump out, end]
-    return {
-      xKF: [0, step1.x, endX],
-      yKF: [0, step1.y, endY],
-    };
+  // position actuelle du milieu du secteur dans la page
+  const currentX = svgLeft + mid.x;
+  const currentY = svgTop + mid.y;
+
+  // translation nécessaire pour que le milieu atteigne la cible
+  const targetX = padding - currentX;
+  const targetY = padding - currentY;
+
+  // keyframes : [start = 0, end = translation requise]
+  return {
+    xKF: [0, targetX],
+    yKF: [0, targetY],
   };
+};
+
+
 
   // when clicking a sector
   const onClickSector = (i, midAngle) => {
@@ -124,41 +117,54 @@ export default function DashboardCircle({ sections = [], outerRadius = 240, inne
             const hoverOffset = computeHoverOffset(mid);
             const isSelected = selectedIndex === idx;
 
+              // rotation pour viser coin haut-gauche
+            const desiredAngle = 135;
+            const rotationDelta = desiredAngle - mid;
+
+
             // compute final keyframes if selected
             const { xKF, yKF } = computeMoveToCorner(mid);
 
             return (
               <motion.path
-                key={it.name}
-                d={d}
-                fill={it.color}
-                stroke="rgba(0,0,0,0.25)"
-                strokeWidth={1}
-                style={{ transformOrigin: `${center}px ${center}px`, cursor: "pointer" }}
-                initial={{ opacity: 1 }}
-                animate={
-                  isSelected
-                    ? {
-                        x: xKF,
-                        y: yKF,
-                        scale: [1, 1.06, 1.95],
-                        opacity: 1,
-                      }
-                    : hoverIndex != null && hoverIndex !== idx
-                    ? { opacity: 0, scale: 1 } // other sectors fade when one selected/animating
-                    : hoverIndex === idx
-                    ? { x: hoverOffset.x, y: hoverOffset.y, scale: 1.02 }
-                    : { x: 0, y: 0, scale: 1, opacity: 1 }
-                }
-                transition={
-                  isSelected
-                    ? { x: { duration: 3, ease: "easeInOut" }, y: { duration: 3, ease: "easeInOut" }, scale: { duration: 3, ease: [0.22, 1, 0.36, 1] } }
-                    : { type: "spring", stiffness: 160, damping: 20 }
-                }
-                onMouseEnter={() => setHoverIndex(idx)}
-                onMouseLeave={() => setHoverIndex((h) => (h === idx ? null : h))}
-                onClick={() => onClickSector(idx, mid)}
-              />
+                  key={it.name}
+                  d={d}
+                  fill={it.color}
+                  stroke="rgba(0,0,0,0.25)"
+                  strokeWidth={1}
+                  style={{ transformOrigin: `${center}px ${center}px`, cursor: "pointer" }}
+                  initial={{ opacity: 1 }}
+                  animate={
+                    isSelected
+                      ? {
+                          x: xKF,
+                          y: yKF,
+                          scale: [1, 1.06, 1.35],
+                          rotate: [0, rotationDelta],   // → va tourner vers le coin
+                          opacity: 1,
+                        }
+                      : {
+                          x: 0,
+                          y: 0,
+                          scale: 1,
+                          rotate: 0,                    // ← retour à l'endroit
+                          opacity: 1,
+                        }
+                  }
+                  transition={
+                    isSelected
+                      ? {
+                          x: { duration: 3, ease: "easeInOut" },
+                          y: { duration: 3, ease: "easeInOut" },
+                          rotate: { duration: 3, ease: "easeInOut" },
+                          scale: { duration: 3, ease: [0.22, 1, 0.36, 1] },
+                        }
+                      : { type: "spring", stiffness: 160, damping: 20 }
+                  }
+                  onMouseEnter={() => setHoverIndex(idx)}
+                  onMouseLeave={() => setHoverIndex((h) => (h === idx ? null : h))}
+                  onClick={() => onClickSector(idx, mid)}
+                />
             );
           })}
         </svg>
