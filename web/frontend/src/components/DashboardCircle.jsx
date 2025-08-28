@@ -131,7 +131,10 @@ const computeMoveToCorner = (midAngle) => {
                 fill={it.color}
                 stroke="rgba(0,0,0,0.25)"
                 strokeWidth={1}
-                style={{ transformOrigin: `${center}px ${center}px`, cursor: "pointer" }}
+                style={{
+                  transformOrigin: `${center}px ${center}px`,
+                  cursor: selectedIndex == null ? "pointer" : "default", // ← curseur désactivé si une section est sélectionnée
+                }}
                 initial={{ opacity: 1 }}
                 animate={
                   isSelected
@@ -140,16 +143,14 @@ const computeMoveToCorner = (midAngle) => {
                         y: yKF,
                         scale: [1, 1.06, 1.35],
                         rotate: [0, rotationDelta],
-                        opacity: 1, // ← le secteur choisi reste visible
+                        opacity: 1,
                       }
-                    : selectedIndex != null
-                    ? { opacity: 0 } // ← les autres disparaissent
                     : {
                         x: 0,
                         y: 0,
                         scale: 1,
                         rotate: 0,
-                        opacity: 1, // ← état normal quand rien n’est sélectionné
+                        opacity: selectedIndex == null ? 1 : 0, // ← les autres disparaissent et ne sont plus interactives
                       }
                 }
                 transition={
@@ -160,32 +161,40 @@ const computeMoveToCorner = (midAngle) => {
                         rotate: { duration: 3, ease: "easeInOut" },
                         scale: { duration: 3, ease: [0.22, 1, 0.36, 1] },
                       }
-                    : selectedIndex != null
-                    ? { duration: 1, ease: "easeOut" } // disparition rapide des autres
                     : { type: "spring", stiffness: 160, damping: 20 }
                 }
-                onMouseEnter={() => setHoverIndex(idx)}
-                onMouseLeave={() => setHoverIndex((h) => (h === idx ? null : h))}
-                onClick={() => onClickSector(idx, mid)}
+                onMouseEnter={() => {
+                  if (selectedIndex == null) setHoverIndex(idx); // ← ignore hover si une section est sélectionnée
+                }}
+                onMouseLeave={() => {
+                  if (selectedIndex == null) setHoverIndex((h) => (h === idx ? null : h));
+                }}
+                onClick={() => {
+                  if (selectedIndex == null) onClickSector(idx, mid); // ← on empêche de recliquer une fois un choix fait
+                }}
               />
+
             );
           })}
         </svg>
 
         {/* label hover (absolute div) */}
-        {hoverIndex != null && (() => {
+        {hoverIndex != null && selectedIndex == null && (() => {
           const s = items[hoverIndex];
           const start = hoverIndex * angleStep;
           const end = (hoverIndex + 1) * angleStep;
           const mid = (start + end) / 2;
           const labelPos = polarToCartesian(center, center, outerRadius + 18, mid);
-          // place label relative to svg container
           return (
-            <div className="label" style={{ left: labelPos.x + 8, top: labelPos.y - 18 }}>
+            <div
+              className="label"
+              style={{ left: labelPos.x + 8, top: labelPos.y - 18 }}
+            >
               {s.name}
             </div>
           );
         })()}
+
 
         {/* detail panel that appears after animation */}
         {showDetail && selectedIndex != null && (
