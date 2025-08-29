@@ -4,7 +4,7 @@ use PHPMailer\PHPMailer\Exception;
 
 require 'vendor/autoload.php';
 
-function sendResetEmail($to, $resetLink, $expires) {
+function sendResetEmail($to, $resetLink, $resetLinkwithouttoken, $expires) {
     $config = require 'config_smtp.php';
 
     $mail = new PHPMailer(true);
@@ -33,7 +33,7 @@ function sendResetEmail($to, $resetLink, $expires) {
         $mail->Body    = "
             <h2>Réinitialisation de mot de passe</h2>
             <p>Vous avez demandé à réinitialiser votre mot de passe. Cliquez sur le lien ci-dessous :</p>
-            <p><a href='$resetLink'>$resetLink</a></p>
+            <p><a href='$resetLink'>$resetLinkwithouttoken</a></p>
             <p>Ce lien expirera dans une heure.</p>
         ";
 

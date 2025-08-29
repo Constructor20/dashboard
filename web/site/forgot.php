@@ -51,9 +51,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $host = $_SERVER['HTTP_HOST'];
                 $path = dirname($_SERVER['PHP_SELF']);
 
-                $resetLink = $protocol . $host . $path . "/reset_password.php?token=$token";
+                $resetLink = $protocol . $host . $path . "reset_password.php?token=$token";
+                $resetLinkwithouttoken = $protocol . $host . $path . "reset_password.php";
 
-                if (sendResetEmail($email, $resetLink, $expires)) {
+                if (sendResetEmail($email, $resetLink, $resetLinkwithouttoken, $expires)) {
                     $_SESSION['reset_last_sent'][$email] = $now;
                     $message = "Un lien a été envoyé à votre adresse e-mail.";
                 } else {

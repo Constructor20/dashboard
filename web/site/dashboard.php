@@ -5,7 +5,7 @@
 //     exit;
 // }
 ?>
-
+<?php include 'auth.php'; ?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
