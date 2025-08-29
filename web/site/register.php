@@ -2,42 +2,40 @@
 session_start();
 require 'includes/db.php';
 
-// Si déjà connecté, on redirige directement
-if (isset($_SESSION['user_id'])) {
-    header('Location: dashboard.php');
-    exit;
-}
-
-// Traitement du formulaire
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username']);
     $email = trim($_POST['email']);
     $password = $_POST['password'];
+    $confirm = $_POST['confirm'];
 
-    // On vérifie que username + email correspondent à un même utilisateur
-    $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ? AND email = ?");
-    $stmt->execute([$username, $email]);
-    $user = $stmt->fetch();
-
-    if ($user && password_verify($password, $user['password'])) {
-        $_SESSION['user_id'] = $user['id'];
-        $_SESSION['username'] = $user['username'];
-        $_SESSION['email'] = $user['email'];
-        header("Location: dashboard.php");
-        exit;
+    if ($password !== $confirm) {
+        $error = "Les mots de passe ne correspondent pas.";
+    } elseif (strlen($password) < 6) {
+        $error = "Le mot de passe doit faire au moins 6 caractères.";
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $error = "Adresse email invalide.";
     } else {
-        $error = "Nom d'utilisateur, email ou mot de passe incorrect.";
+        // Vérifier que l'utilisateur ou l'email n'existe pas déjà
+        $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ? OR email = ?");
+        $stmt->execute([$username, $email]);
+        if ($stmt->rowCount() > 0) {
+            $error = "Nom d'utilisateur ou email déjà utilisé.";
+        } else {
+            $hash = password_hash($password, PASSWORD_DEFAULT);
+            $stmt = $pdo->prepare("INSERT INTO users (username, email, password) VALUES (?, ?, ?)");
+            $stmt->execute([$username, $email, $hash]);
+            header("Location: index.php?registered=1");
+            exit;
+        }
     }
 }
 ?>
-
-
 
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Connexion - Minecraft Panel</title>
+    <title>Inscription - Minecraft Panel</title>
     <style>
         body {
             margin: 0;
@@ -50,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             align-items: center;
         }
 
-        .login-container {
+        .register-container {
             background: white;
             padding: 40px 30px;
             border-radius: 12px;
@@ -65,7 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             margin-bottom: 30px;
         }
 
-        .login-container label {
+        label {
             display: block;
             margin-bottom: 8px;
             font-weight: bold;
@@ -90,7 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             outline: none;
         }
 
-        .login-container .primary-button {
+        .primary-button {
             width: 100%;
             padding: 12px;
             background: #2a5298;
@@ -100,14 +98,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             font-size: 16px;
             cursor: pointer;
             transition: background 0.3s ease;
-            margin-top: 10px;
         }
 
-        .login-container .primary-button:hover {
+        .primary-button:hover {
             background: #1e3c72;
         }
 
-        .login-container .secondary-button {
+        .secondary-button {
             width: 100%;
             padding: 10px;
             background: transparent;
@@ -120,7 +117,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             margin-top: 8px;
         }
 
-        .login-container .secondary-button:hover {
+        .secondary-button:hover {
             background: #2a5298;
             color: white;
         }
@@ -136,34 +133,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </style>
 </head>
 <body>
-  <div class="login-container">
-    <form method="POST">
-        <h2>Minecraft Panel</h2>
-        <?php if (!empty($error)) echo "<div class='error'>$error</div>"; ?>
+    <div class="register-container">
+        <form method="POST">
+            <h2>Créer un compte</h2>
+            <?php if (!empty($error)) echo "<div class='error'>$error</div>"; ?>
 
-        <label for="username">Nom d'utilisateur</label>
-        <input type="text" name="username" id="username" class="input-field" required>
-
-        <label for="email">Adresse e-mail</label>
-        <input type="email" name="email" id="email" class="input-field" required>
-
-        <label for="password">Mot de passe</label>
-        <input type="password" name="password" id="password" class="input-field" required>
-
-        <button type="submit" class="primary-button">Se connecter</button>
-    </form>
+            <label for="email">Adresse email</label>
+            <input type="email" name="email" id="email" class="input-field" required>
 
 
+            <label for="username">Nom d'utilisateur</label>
+            <input type="text" name="username" id="username" class="input-field" required>
 
-    <!-- Liens supplémentaires (autres actions) -->
-    <form action="forgot.php" method="GET">
-        <button type="submit" class="secondary-button">Mot de passe oublié ?</button>
-    </form>
-    <form action="register.php" method="GET">
-        <button type="submit" class="secondary-button">S'inscrire</button>
-    </form>
-  </div>
+            <label for="password">Mot de passe</label>
+            <input type="password" name="password" id="password" class="input-field" required>
+
+            <label for="confirm">Confirmer le mot de passe</label>
+            <input type="password" name="confirm" id="confirm" class="input-field" required>
+
+            <button type="submit" class="primary-button">Créer mon compte</button>
+        </form>
+
+        <form action="index.php" method="GET">
+            <button type="submit" class="secondary-button">Déjà inscrit ? Connexion</button>
+        </form>
+    </div>
 </body>
 </html>
-
-

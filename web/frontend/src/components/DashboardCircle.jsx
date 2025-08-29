@@ -195,7 +195,6 @@ const computeMoveToCorner = (midAngle) => {
           );
         })()}
 
-
         {/* detail panel that appears after animation */}
         {showDetail && selectedIndex != null && (
           <div className="detail-panel" aria-hidden={!showDetail}>
