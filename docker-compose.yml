@@ -33,6 +33,19 @@ services:
     networks:
       - webnet
 
+  frontend-dev:
+    image: node:20-alpine
+    container_name: react-frontend-dev
+    working_dir: /app
+
+    volumes:
+      - ./web/frontend:/app
+    ports:
+      - "5173:5173"  # expose le port pour tests via Tailscale
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
+    restart: unless-stopped
+    platform: linux/arm64
+
 
   # Base de données (interne)
   db:

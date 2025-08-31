@@ -12,6 +12,9 @@ const sections = [
 export default function App() {
   return (
     <div className="app-center">
+      <div className="hover-message">
+          Passez la souris sur une section pour voir les options disponibles
+      </div>
       <div className="container" aria-hidden={false}>
         <DashboardCircle sections={sections} />
       </div>
