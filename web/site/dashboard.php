@@ -29,7 +29,7 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         }
     </style>
-</head>
+</head>  
 <body>
     <?php include 'navbar.php'; ?>
 
@@ -45,7 +45,7 @@
             <li>Projet 1 : Serveur Minecraft survie</li>
             <li>Projet 2 : Mod personnalisé SpotiMod</li>
             <li>Projet 3 : Panel d’administration</li>
-        </ul>
+        </ul>>
     </div>
 
     <?php include 'footer.php'; ?>

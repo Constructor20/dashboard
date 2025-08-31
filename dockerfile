@@ -1,6 +1,6 @@
 FROM php:8.2-apache
 
-# Installer les dépendances nécessaires à Composer et pour PDO MySQL
+# Installer les dépendances pour PDO MySQL et Composer
 RUN apt-get update && apt-get install -y \
     unzip \
     git \
@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y \
     mariadb-client \
     libonig-dev \
     libzip-dev \
+    default-mysql-client \
     && docker-php-ext-install pdo pdo_mysql \
     && rm -rf /var/lib/apt/lists/*
 
@@ -18,8 +19,5 @@ RUN curl -sS https://getcomposer.org/installer | php && \
 
 # Activer mod_rewrite d’Apache
 RUN a2enmod rewrite
-
-# Copier le code source
-COPY ./web/site /var/www/html
 
 WORKDIR /var/www/html

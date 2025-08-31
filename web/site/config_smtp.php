@@ -7,5 +7,4 @@ return [
     'password' => 'fbgy lkbs ncfw dxwy', //mot de passe d'application
     'secure' => 'tls',
     'from_email' => 'christophealeixo69@gmail.com',
-    'to_email' => 'aleixochristophe@gmail.com'
 ];
