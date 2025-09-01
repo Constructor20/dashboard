@@ -13,6 +13,8 @@ services:
       - ./web/site:/var/www/html
     restart: unless-stopped
     platform: linux/arm64
+    ports:
+      - "5000:80"   # accès direct via Tailscale
     networks:
       - webnet
 
