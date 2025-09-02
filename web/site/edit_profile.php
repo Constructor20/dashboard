@@ -103,7 +103,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <button type="submit">Enregistrer les modifications</button>
         </form>
-            <a href="#">Changer de mot de passe ?</a>
+            <a href="change_password.php">Changer de mot de passe ?</a>
         <p style="margin-top:20px;">
             <a href="profile.php" style="color:#ffd700;">⬅ Retour au tableau de bord</a>
         </p>
