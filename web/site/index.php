@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['username'] = $user['username'];
         $_SESSION['email'] = $user['email'];
-        header("Location: dashboard.php");
+        header("Location: profile.php");
         exit;
     } else {
         $error = "Nom d'utilisateur, email ou mot de passe incorrect.";
