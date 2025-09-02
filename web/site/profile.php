@@ -33,20 +33,30 @@
 <body>
     <?php include 'navbar.php'; ?>
 
-    <div class="container">
-        <h1>Bienvenue, <?= htmlspecialchars($_SESSION['username']); ?> !</h1>
-        <p>Ton adresse e-mail : <strong><?= htmlspecialchars($_SESSION['email']); ?></strong></p>
+<div class="container">
+    <h1>Bienvenue, <?= htmlspecialchars($_SESSION['username']); ?> !</h1>
+    <p>Ton adresse e-mail : <strong><?= htmlspecialchars($_SESSION['email']); ?></strong></p>
 
-        <hr style="margin: 30px 0;">
-
-        <h2>Mes projets Minecraft</h2>
-        <p>Ici tu peux afficher des infos, stats ou liens vers des actions.</p>
+    <!-- Section de gestion du compte -->
+    <div style="margin: 20px 0; padding: 15px; background: rgba(255,255,255,0.15); border-radius: 8px;">
+        <h2>Mon compte</h2>
         <ul>
-            <li>Projet 1 : Serveur Minecraft survie</li>
-            <li>Projet 2 : Mod personnalisé SpotiMod</li>
-            <li>Projet 3 : Panel d’administration</li>
-        </ul>>
+            <li><a href="edit_profile.php" style="color: #ffd700; font-weight: bold;">Modifier mes informations</a></li>
+            <!-- tu peux rajouter d'autres liens ici -->
+        </ul>
     </div>
+
+    <hr style="margin: 30px 0;">
+
+    <h2>Mes projets Minecraft</h2>
+    <p>Ici tu peux afficher des infos, stats ou liens vers des actions.</p>
+    <ul>
+        <li>Projet 1 : Serveur Minecraft survie</li>
+        <li>Projet 2 : Mod personnalisé SpotiMod</li>
+        <li>Projet 3 : Panel d’administration</li>
+    </ul>
+</div>
+
 
     <?php include 'footer.php'; ?>
 </body>
