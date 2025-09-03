@@ -52,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         }
         input[type="text"], input[type="email"] {
-            width: 100%;
+            width: 84%;
             padding: 12px;
             margin: 10px 0;
             border-radius: 8px;
@@ -103,7 +103,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <button type="submit">Enregistrer les modifications</button>
         </form>
-            <a href="change_password.php">Changer de mot de passe ?</a>
+            <a href="change_password.php" style="color:#ffd700;">Changer de mot de passe</a>
+
         <p style="margin-top:20px;">
             <a href="profile.php" style="color:#ffd700;">⬅ Retour au tableau de bord</a>
         </p>
