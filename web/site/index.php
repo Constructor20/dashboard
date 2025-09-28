@@ -4,7 +4,7 @@ require 'includes/db.php';
 
 // Si déjà connecté, on redirige directement
 if (isset($_SESSION['user_id'])) {
-    header('Location: dashboard.php');
+    header('Location: profile.php');
     exit;
 }
 
@@ -30,7 +30,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
-
 
 
 <!DOCTYPE html>

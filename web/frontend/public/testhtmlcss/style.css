@@ -1,0 +1,299 @@
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  color: #333;
+  line-height: 1.6;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* Conteneur principal */
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* Navbar */
+.navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22px 40px;
+  background: transparent;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+}
+
+.nav-inner {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  font-weight: bold;
+  color: #fff;
+  gap: 14px;
+}
+
+.logo img {
+  height: 56px;
+}
+
+.nav-links {
+  margin-left: auto;
+  display: flex;
+  gap: 22px;
+  align-items: center;
+}
+
+.nav-links a {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.95);
+  letter-spacing: 1px;
+}
+
+.nav-links a:hover {
+  opacity: 0.85;
+}
+
+
+/* Hero */
+.hero {
+  height: 520px;
+  background-image: url("https://images.unsplash.com/photo-1526378727650-9f77e30d4d3a?auto=format&fit=crop&w=1950&q=80");
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px; 
+background: rgba(3, 43, 62, 0.45);
+}
+
+.hero h1 {
+  font-size: 44px;
+  color: #0e4770;
+  margin: 0 0 8px;
+}
+
+.hero p {
+  color: #e9f2fb;
+  font-size: 18px;
+  margin: 0 0 20px;
+}
+
+.btn {
+  display: inline-block;
+  padding: 12px 22px;
+  background: #007acc;
+  color: white;
+  border-radius: 6px;
+  font-weight: bold;
+}
+
+/* Section */
+.section {
+  padding: 70px 20px;
+  text-align: center;
+}
+
+.section h2 {
+  font-size: 24px;
+  margin-bottom: 14px;
+}
+
+.muted {
+  color: #777;
+  margin-bottom: 26px;
+}
+
+.divider {
+  width: 220px;
+  height: 4px;
+  background: #007acc;
+  margin: 16px auto;
+}
+
+/* Gallery */
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 26px;
+  margin-top: 30px;
+}
+
+.gallery div {
+  background-size: cover;
+  background-position: center;
+  border-radius: 4px;
+}
+
+.gallery .large {
+  height: 260px;
+}
+
+.gallery .wide {
+  height: 120px;
+}
+
+/* Features */
+.features {
+  background: #f6f7f9;
+  padding: 40px 20px;
+}
+
+.features .grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 30px;
+  text-align: center;
+  margin-top: 28px;
+}
+
+.feature-icon {
+  font-size: 28px;
+  color: #007acc;
+  margin-bottom: 12px;
+}
+
+.feature-title {
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.feature-desc {
+  font-size: 14px;
+  color: #777;
+}
+
+/* Testimonials */
+.testimonials {
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.testimonial {
+  max-width: 800px;
+  margin: 20px auto;
+  color: #777;
+}
+
+.testimonial cite {
+  display: block;
+  margin-top: 16px;
+  font-weight: bold;
+  color: #333;
+}
+
+/* Newsletter */
+.newsletter {
+  background: #f0f3f6;
+  padding: 46px 20px;
+  text-align: center;
+}
+
+.newsletter .form {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  max-width: 700px;
+  margin: 20px auto;
+}
+
+.newsletter input[type=email] {
+  flex: 1;
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.newsletter button {
+  padding: 12px 18px;
+  background: #007acc;
+  color: white;
+  border: none;
+  border-radius: 4px;
+}
+
+/* Footer */
+footer {
+  background: #171616;
+  color: #ddd;
+  padding: 24px 20px;
+  text-align: center;
+}
+
+footer .socials a {
+  color: #ddd;
+  margin: 0 8px;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .gallery {
+    grid-template-columns: 1fr;
+  }
+
+  .features .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .nav-links {
+    display: none;
+  }
+
+  .hero {
+    height: 420px;
+  }
+
+  .hero h1 {
+    font-size: 36px;
+  }
+}
+
+@media (max-width: 500px) {
+  .newsletter .form {
+    flex-direction: column;
+  }
+
+/* Footer */
+  footer {
+    background: #171616;
+    color: white;
+    text-align: center;
+    padding: 20px;
+    font-size: 14px;
+  }
+
+  footer a {
+    color: white;
+    margin: 0 10px;
+    text-decoration: none;
+  }
+
+  footer a:hover {
+    color: #007acc;
+  }
+
+  footer p {
+    margin-top: 15px;
+    font-size: 12px;
+  }
+
+}
