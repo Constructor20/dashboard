@@ -7,3 +7,6 @@ docker-compose.yml
 #Info perso sensible
 web/frontend/public/portfolio/8-1 - BTS SIO - 2025 - Annexe 8-1 - Epreuve E5 - Tableau de synthese.xlsx
 web/frontend/public/portfolio/cv.pdf
+web/frontend/public/testhtmlcss
+web/frontend/public/testhtmlcss/index.html
+web/frontend/public/testhtmlcss/style.css
