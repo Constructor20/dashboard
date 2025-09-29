@@ -10,3 +10,6 @@ web/frontend/public/testhtmlcss/
 docker-compose.yml
 web/site/ecommerce/
 web/site/explorerfile/
+package.json
+package-lock.json
+node_modules/
