@@ -20,7 +20,7 @@ if ($user_id == 1) {
     $stmt->execute([$user_id]);
 }
 $servers = $stmt->fetchAll(PDO::FETCH_ASSOC);
-test
+
 // --- Fonctions pour tester l'état et les joueurs ---
 function isServerOnline($host, $port, $timeout = 1) {
     $conn = @fsockopen($host, $port, $errno, $errstr, $timeout);
