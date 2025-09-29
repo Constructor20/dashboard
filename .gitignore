@@ -10,3 +10,5 @@ web/frontend/public/testhtmlcss
 web/frontend/public/testhtmlcss/index.html
 web/frontend/public/testhtmlcss/style.css
 docker-compose.yml
+web/frontend/public/testhtmlcss/index.html
+web/frontend/public/testhtmlcss/style.css
