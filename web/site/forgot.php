@@ -173,7 +173,6 @@ $remaining = max(0, $cooldown - ($now - $last));
 
     <div class="container">
         <h1>Mot de passe oublié</h1>
-dada
     <?php if ($message): ?>
         <?php if ($last !== 0 && $remaining > 0): ?>
             <div class="message" id="countdown-message" data-remaining="<?= $remaining ?>">
