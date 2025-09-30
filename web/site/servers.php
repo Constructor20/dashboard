@@ -102,8 +102,8 @@ function getPlayers($host, $port, $maxPlayers) {
         <p>Aucun serveur accessible pour votre compte.</p>
     <?php else: ?>
         <?php foreach ($servers as $srv): 
-            $online = isServerOnline($srv['host'], $srv['port']);
-            $players = getPlayers($srv['host'], $srv['port'], $srv['max_players']);
+            $online = $srv['online'] == 1;
+            $players = $online ? getPlayers($srv['host'], $srv['port'], $srv['max_players']) : "0/{$srv['max_players']}";
             $link = "console.php?server=" . $srv['id'];
         ?>
             <div class="server" onclick="window.location.href='<?= $link ?>'">
