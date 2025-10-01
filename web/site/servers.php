@@ -20,79 +20,23 @@ if ($user_id == 1) {
     $stmt->execute([$user_id]);
 }
 $servers = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-// --- Fonctions pour tester l'état et les joueurs ---
-function isServerOnline($host, $port, $timeout = 1) {
-    $conn = @fsockopen($host, $port, $errno, $errstr, $timeout);
-    if ($conn) { fclose($conn); return true; }
-    return false;
-}
-
-function getPlayers($host, $port, $maxPlayers) {
-    if (!isServerOnline($host, $port)) return "0/$maxPlayers";
-    $players = rand(0, $maxPlayers); // ou remplacer par vrai comptage via API
-    return "$players/$maxPlayers";
-}
 ?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <?php include 'navbar.php'; ?>
     <meta charset="UTF-8">
-    <title>Gestion Serveurs Minecraft</title>
+    <title>Gestion Serveurs Minecraft</title>   
     <style>
-        body {
-            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #1e3c72, #2a5298);
-            color: white;
-            min-height: 100vh;
-            margin: 0;
-            text-align: center;
-            padding-bottom: 60px;
-        }
-        h1 {
-            margin-top: 80px;
-            font-size: 32px;
-            color: #ffd700;
-            text-shadow: 0 2px 6px rgba(0,0,0,0.4);
-        }
-        .server {
-            background: rgba(255,255,255,0.1);
-            margin: 20px auto;
-            padding: 20px 25px;
-            border-radius: 20px;
-            max-width: 500px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            display: flex;
-            align-items: center;
-            justify-content: flex-start;
-            gap: 15px;
-            transition: transform 0.2s, background 0.3s;
-        }
-        .server:hover {
-            transform: translateY(-3px);
-            background: rgba(255,255,255,0.2);
-            cursor: pointer;
-        }
-        .status {
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            background: red;
-        }
+        body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #1e3c72, #2a5298); color: white; min-height: 100vh; margin: 0; text-align: center; padding-bottom: 60px; }
+        h1 { margin-top: 80px; font-size: 32px; color: #ffd700; text-shadow: 0 2px 6px rgba(0,0,0,0.4); }
+        .server { background: rgba(255,255,255,0.1); margin: 20px auto; padding: 20px 25px; border-radius: 20px; max-width: 500px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: flex-start; gap: 15px; transition: transform 0.2s, background 0.3s; }
+        .server:hover { transform: translateY(-3px); background: rgba(255,255,255,0.2); cursor: pointer; }
+        .status { width: 18px; height: 18px; border-radius: 50%; background: red; }
         .status.green { background: #4ade80; }
         .status.red { background: #f87171; }
-        .players {
-            font-weight: bold;
-            color: #fff;
-            min-width: 50px;
-        }
-        .server a {
-            text-decoration: none;
-            color: #fff;
-            font-weight: bold;
-            font-size: 18px;
-        }
+        .players { font-weight: bold; color: #fff; min-width: 50px; }
+        .server a { text-decoration: none; color: #fff; font-weight: bold; font-size: 18px; }
     </style>
 </head>
 <body>
@@ -103,7 +47,9 @@ function getPlayers($host, $port, $maxPlayers) {
     <?php else: ?>
         <?php foreach ($servers as $srv): 
             $online = $srv['online'] == 1;
-            $players = $online ? getPlayers($srv['host'], $srv['port'], $srv['max_players']) : "0/{$srv['max_players']}";
+            $players = $online 
+                ? (isset($srv['current_players']) ? "{$srv['current_players']}/{$srv['max_players']}" : "0/{$srv['max_players']}")
+                : "0/{$srv['max_players']}";
             $link = "console.php?server=" . $srv['id'];
         ?>
             <div class="server" onclick="window.location.href='<?= $link ?>'">
