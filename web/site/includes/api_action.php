@@ -4,7 +4,37 @@ include 'db.php'; // PDO $pdo
 
 header('Content-Type: application/json');
 
-// Récupérer les données JSON envoyées
+// --- Fonctions utilitaires --- //
+function ping_pc($ip, $timeout = 2) {
+    if (stripos(PHP_OS, 'WIN') === 0) {
+        $output = shell_exec("ping -n 1 -w " . ($timeout*1000) . " " . escapeshellarg($ip));
+        return (strpos($output, "TTL=") !== false);
+    } else {
+        $output = shell_exec("ping -c 1 -W $timeout " . escapeshellarg($ip));
+        return (strpos($output, "ttl=") !== false);
+    }
+}
+
+function send_wol($mac, $broadcast = "255.255.255.255", $port = 9) {
+    $mac = str_replace([':', '-'], '', $mac);
+    if (strlen($mac) != 12) return false;
+
+    $packet = str_repeat(chr(0xFF), 6);
+    for ($i = 0; $i < 16; $i++) {
+        $packet .= pack('H12', $mac);
+    }
+
+    $sock = socket_create(AF_INET, SOCK_DGRAM, SOL_UDP);
+    if ($sock === false) return false;
+
+    socket_set_option($sock, SOL_SOCKET, SO_BROADCAST, true);
+    $result = socket_sendto($sock, $packet, strlen($packet), 0, $broadcast, $port);
+    socket_close($sock);
+
+    return $result !== false;
+}
+
+// --- Lecture données JSON envoyées --- //
 $data = json_decode(file_get_contents('php://input'), true);
 if (!$data || !isset($data['server_id'], $data['action'])) {
     echo json_encode(["status"=>"error","message"=>"Paramètres manquants"]);
@@ -15,7 +45,7 @@ $server_id = intval($data['server_id']);
 $action = strtolower($data['action']);
 $user_id = $_SESSION['user_id'];
 
-// --- Vérifier serveur et permissions ---
+// --- Vérifier serveur et permissions --- //
 if ($user_id == 1) {
     $stmt = $pdo->prepare("SELECT * FROM servers WHERE id=?");
     $stmt->execute([$server_id]);
@@ -39,7 +69,7 @@ if (!$server) {
     exit;
 }
 
-// --- Vérifier action autorisée ---
+// --- Vérifier action autorisée --- //
 if ($action === 'start' && !$can_start) {
     echo json_encode(["status"=>"error","message"=>"Permission refusée pour démarrer"]);
     exit;
@@ -49,25 +79,54 @@ if ($action === 'stop' && !$can_stop) {
     exit;
 }
 
-// --- Envoyer requête à l'API Python ---
-$API_URL = "http://192.168.1.22:8080/" . $action;
-$postData = json_encode(["server_id" => $server_id]);
+// --- Variables PC cible --- //
+$pc_ip = $server['pc_ip'] ?? "192.168.1.22";   
+$pc_mac = $server['pc_mac'] ?? "2c:f0:5d:7f:e3:2b"; 
+$ssh_user = $server['ssh_user'] ?? "pi";       // ajouter colonne SSH user
+$ssh_key  = $server['ssh_key_path'] ?? "/root/.ssh/id_rsa"; // chemin clé privée dans container
 
-$ch = curl_init($API_URL);
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_POST, true);
-curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
-$response = curl_exec($ch);
-$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-curl_close($ch);
+// --- Si start : vérifier si PC est ON, sinon envoyer WOL --- //
+if ($action === 'start') {
+    if (!ping_pc($pc_ip)) {
+        send_wol($pc_mac, "192.168.1.255");
+        $max_wait = 60; // attendre jusqu'à 60s
+        $elapsed = 0;
+        while ($elapsed < $max_wait && !ping_pc($pc_ip)) {
+            sleep(5);
+            $elapsed += 5;
+        }
+        if ($elapsed >= $max_wait) {
+            echo json_encode(["status"=>"error","message"=>"Le PC n'a pas démarré après WOL"]);
+            exit;
+        }
+    }
+}
 
-if ($httpCode !== 200 || !$response) {
-    echo json_encode(["status"=>"error","message"=>"Impossible de contacter le serveur"]);
+// --- Lancer le script Python via SSH --- //
+$remote_script = $action === 'start' ? '/home/pi/start_server.py' : '/home/pi/stop_server.py';
+$ssh_cmd = "ssh -i " . escapeshellarg($ssh_key) . " -o StrictHostKeyChecking=no $ssh_user@$pc_ip 'python3 $remote_script'";
+
+exec($ssh_cmd, $output, $status);
+
+if ($status !== 0) {
+    echo json_encode([
+        "status" => "error",
+        "message" => "Impossible d'exécuter le script Python via SSH",
+        "output" => $output
+    ]);
     exit;
 }
 
-$resData = json_decode($response, true);
-if (!$resData) $resData = ["status"=>"error","message"=>"Réponse invalide de l'API"];
+echo json_encode([
+    "status" => "success",
+    "message" => "Action '$action' exécutée avec succès",
+    "output" => $output
+]);
 
-echo json_encode($resData);
+echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDwxlAPKjKaJHYxKTAmdZFyDq/4NplUu27xxkBjpsaCAC8i0WJ0EgZWsPZfE58X0B6GQeAXl5MXBlTzYtgIBKIpssm7g/pu9gGfYImRR92NIT2HGSqGgjBg4gOvQEL22j5OyB7svbC6X7Q0Ug9/Bvx9OAqvIq1LE1gDXh34IqgkqZzYVgGV03zAjAGK28Ivz1d253/V2R4Cn5C3SVjKdt1oAYGmygkSrBdXo6TpsV+eYAeR/XkOn/ZlNtkMQTU3dF4dv37AYvMx68TlekOqgSTr6GMgae7SZJeW45PHWKW3lTUajSLFQ71l8EBoNSj1zmonNsTfLh37Ds/Y4GD5fftavMM78/A63NfSYC1zRKTMmCS2eyau2z/ii3oGRfOLQ3pE2z/nqYIucrqqszhEyRyVUnlrH9iHONKFjaWw/KoILIaYXNMwdeuQDlbW21/6B42AKt1YCy148bosNN4t/eZB7PeajGhCTf/c4jWuIU4vJytOsCyS8FTy4vJeMO1LXHx0RNQkzuK71HHU9aCKkTRkQUqwT2w6n7JM9hddixUd6JYr3EB0bB545gxy1CK2TM+vzPvGRrXV6bsd6Nc0EgHX5M4sp5rqxP9ZeQkyRPj3jtUdyLjcfwr403p83E82fnK7KBVOfnGdfe8cMHc6wWt88ZqAjyqGoMnRg7S6J0bCMw== root@104231ef769b" > $env:USERPROFILE\.ssh\authorized_keys
+
+ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDwxlAPKjKaJHYxKTAmdZFyDq/4NplUu27xxkBjpsaCAC8i0WJ0EgZWsPZfE58X0B6GQeAXl5MXBlTzYtgIBKIpssm7g/pu9gGfYImRR92NIT2HGSqGgjBg4gOvQEL22j5OyB7svbC6X7Q0Ug9/Bvx9OAqvIq1LE1gDXh34IqgkqZzYVgGV03zAjAGK28Ivz1d253/V2R4Cn5C3SVjKdt1oAYGmygkSrBdXo6TpsV+eYAeR/XkOn/ZlNtkMQTU3dF4dv37AYvMx68TlekOqgSTr6GMgae7SZJeW45PHWKW3lTUajSLFQ71l8EBoNSj1zmonNsTfLh37Ds/Y4GD5fftavMM78/A63NfSYC1zRKTMmCS2eyau2z/ii3oGRfOLQ3pE2z/nqYIucrqqszhEyRyVUnlrH9iHONKFjaWw/KoILIaYXNMwdeuQDlbW21/6B42AKt1YCy148bosNN4t/eZB7PeajGhCTf/c4jWuIU4vJytOsCyS8FTy4vJeMO1LXHx0RNQkzuK71HHU9aCKkTRkQUqwT2w6n7JM9hddixUd6JYr3EB0bB545gxy1CK2TM+vzPvGRrXV6bsd6Nc0EgHX5M4sp5rqxP9ZeQkyRPj3jtUdyLjcfwr403p83E82fnK7KBVOfnGdfe8cMHc6wWt88ZqAjyqGoMnRg7S6J0bCMw== root@104231ef769b
+
+ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDwxlAPKjKaJHYxKTAmdZFyDq/4NplUu27xxkBjpsaCAC8i0WJ0EgZWsPZfE58X0B6GQeAXl5MXBlTzYtgIBKIpssm7g/pu9gGfYImRR92NIT2HGSqGgjBg4gOvQEL22j5OyB7svbC6X7Q0Ug9/Bvx9OAqvIq1LE1gDXh34IqgkqZzYVgGV03zAjAGK28Ivz1d253/V2R4Cn5C3SVjKdt1oAYGmygkSrBdXo6TpsV+eYAeR/XkOn/ZlNtkMQTU3dF4dv37AYvMx68TlekOqgSTr6GMgae7SZJeW45PHWKW3lTUajSLFQ71l8EBoNSj1zmonNsTfLh37Ds/Y4GD5fftavMM78/A63NfSYC1zRKTMmCS2eyau2z/ii3oGRfOLQ3pE2z/nqYIucrqqszhEyRyVUnlrH9iHONKFjaWw/KoILIaYXNMwdeuQDlbW21/6B42AKt1YCy148bosNN4t/eZB7PeajGhCTf/c4jWuIU4vJytOsCyS8FTy4vJeMO1LXHx0RNQkzuK71HHU9aCKkTRkQUqwT2w6n7JM9hddixUd6JYr3EB0bB545gxy1CK2TM+vzPvGRrXV6bsd6Nc0EgHX5M4sp5rqxP9ZeQkyRPj3jtUdyLjcfwr403p83E82fnK7KBVOfnGdfe8cMHc6wWt88ZqAjyqGoMnRg7S6J0bCMw== root@104231ef769b
+
+SHA256:CG/Af1kNbAqJe8onzbbgPoIDG64P2IxtzpLxi/Y+iOI
