@@ -9,14 +9,15 @@ COPY package*.json ./
 # Installe les dépendances
 RUN npm install
 
-# Initialise Tailwind
+# Installer Tailwind si ce n'est pas déjà dans package.json
+RUN npm install -D tailwindcss postcss autoprefixer
+
+
+# Initialise Tailwind (si déjà fait dans package.json, cette ligne peut être supprimée)
 RUN npx tailwindcss init -p
 
 # Copie tout le reste du code
 COPY . .
-
-# Expose le port du dev server
-EXPOSE 5173
 
 # Commande par défaut (mode dev)
 CMD ["npm", "run", "dev"]

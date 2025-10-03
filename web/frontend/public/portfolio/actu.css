@@ -1,0 +1,35 @@
+.skill-card img {
+  border-radius: 35%;
+  padding: 20px;
+  transition: transform 0.3s ease;
+}
+
+.skill-card img:hover {
+  transform: scale(1.2);
+}
+
+.youtube-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 10px 16px;
+  background-color: #FF0000;
+  color: white;
+  font-weight: bold;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.youtube-btn img {
+  width: 24px;
+  height: 24px;
+  border-radius: 0;
+}
+
+.youtube-btn:hover {
+  background-color: #cc0000;
+  transform: scale(1.05);
+}
+
