@@ -15,3 +15,4 @@ package-lock.json
 node_modules/
 dockerfile
 web/site/includes/db.php
+web/site/id_ed25519_converted.pub
