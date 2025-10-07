@@ -55,6 +55,7 @@ button:hover { background:#1d4ed8; }
 .command-input { display:flex; gap:10px; margin:20px; }
 .command-input input { flex:1; padding:8px; border-radius:6px; border:none; }
 .command-input button { background:#16a34a; }
+#action-status { margin:15px; font-weight:bold; }
 </style>
 </head>
 <body>
@@ -65,6 +66,7 @@ button:hover { background:#1d4ed8; }
 <?php if($permissions["can_start"]): ?><button onclick="sendAction('start')">Démarrer</button><?php endif; ?>
 <?php if($permissions["can_stop"]): ?><button onclick="sendAction('stop')">Arrêter</button><?php endif; ?>
 </div>
+<div id="action-status"></div>
 
 <?php if($permissions["can_console"]): ?>
 <div class="console-box" id="console"></div>
@@ -84,7 +86,6 @@ function fetchConsole() {
         .then(data => {
             const box = document.getElementById("console");
             if(box) {
-                // Échapper les caractères HTML pour éviter de casser le rendu
                 const safeLogs = data.logs.map(l => l.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'));
                 box.innerHTML = safeLogs.join("\n");
                 box.scrollTop = box.scrollHeight;
@@ -112,11 +113,21 @@ function sendAction(action){
         method:"POST",
         headers:{"Content-Type":"application/json"},
         body: JSON.stringify({server_id:serverId, action:action})
-    }).then(res=>res.json()).then(data=>{
-        alert(data.message);
-        location.reload();
+    })
+    .then(res => res.text()) // <- texte brut
+    .then(text => {
+        const statusDiv = document.getElementById("action-status");
+        statusDiv.style.whiteSpace = "pre-wrap"; // garder les retours à la ligne
+        statusDiv.style.color = "#ef4444"; // rouge pour les erreurs
+        statusDiv.textContent = text;
+    })
+    .catch(err => {
+        const statusDiv = document.getElementById("action-status");
+        statusDiv.style.color = "#ef4444";
+        statusDiv.textContent = "❌ Erreur fetch : " + err;
     });
 }
+
 
 // --- Rafraîchissement toutes les 1s ---
 setInterval(fetchConsole,1000);

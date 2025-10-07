@@ -1,43 +1,14 @@
 <?php
 include '../auth.php';
 include 'db.php'; // PDO $pdo
+include 'lib/woltour.php';
+include 'lib/sshtour.php';
 
 header('Content-Type: application/json');
 
-// --- Fonctions utilitaires --- //
-function ping_pc($ip, $timeout = 2) {
-    if (stripos(PHP_OS, 'WIN') === 0) {
-        $output = shell_exec("ping -n 1 -w " . ($timeout*1000) . " " . escapeshellarg($ip));
-        return (strpos($output, "TTL=") !== false);
-    } else {
-        $output = shell_exec("ping -c 1 -W $timeout " . escapeshellarg($ip));
-        return (strpos($output, "ttl=") !== false);
-    }
-}
-
-function send_wol($mac, $broadcast = "255.255.255.255", $port = 9) {
-    $mac = str_replace([':', '-'], '', $mac);
-    if (strlen($mac) != 12) return false;
-
-    $packet = str_repeat(chr(0xFF), 6);
-    for ($i = 0; $i < 16; $i++) {
-        $packet .= pack('H12', $mac);
-    }
-
-    $sock = socket_create(AF_INET, SOCK_DGRAM, SOL_UDP);
-    if ($sock === false) return false;
-
-    socket_set_option($sock, SOL_SOCKET, SO_BROADCAST, true);
-    $result = socket_sendto($sock, $packet, strlen($packet), 0, $broadcast, $port);
-    socket_close($sock);
-
-    return $result !== false;
-}
-
-// --- Lecture données JSON envoyées --- //
 $data = json_decode(file_get_contents('php://input'), true);
 if (!$data || !isset($data['server_id'], $data['action'])) {
-    echo json_encode(["status"=>"error","message"=>"Paramètres manquants"]);
+    echo json_encode(["status" => "error", "message" => "Paramètres manquants"]);
     exit;
 }
 
@@ -45,7 +16,7 @@ $server_id = intval($data['server_id']);
 $action = strtolower($data['action']);
 $user_id = $_SESSION['user_id'];
 
-// --- Vérifier serveur et permissions --- //
+// --- Vérification serveur et permissions ---
 if ($user_id == 1) {
     $stmt = $pdo->prepare("SELECT * FROM servers WHERE id=?");
     $stmt->execute([$server_id]);
@@ -65,60 +36,110 @@ if ($user_id == 1) {
 }
 
 if (!$server) {
-    echo json_encode(["status"=>"error","message"=>"Serveur introuvable"]);
+    echo json_encode(["status" => "error", "message" => "Serveur introuvable"]);
     exit;
 }
 
-// --- Vérifier action autorisée --- //
 if ($action === 'start' && !$can_start) {
-    echo json_encode(["status"=>"error","message"=>"Permission refusée pour démarrer"]);
+    echo json_encode(["status" => "error", "message" => "Permission refusée pour démarrer"]);
     exit;
 }
 if ($action === 'stop' && !$can_stop) {
-    echo json_encode(["status"=>"error","message"=>"Permission refusée pour arrêter"]);
+    echo json_encode(["status" => "error", "message" => "Permission refusée pour arrêter"]);
     exit;
 }
 
-// --- Variables PC cible --- //
-$pc_ip = $server['pc_ip'] ?? "192.168.1.22";   
-$pc_mac = $server['pc_mac'] ?? "2c:f0:5d:7f:e3:2b"; 
-$ssh_user = $server['ssh_user'] ?? "pi";       // ajouter colonne SSH user
-$ssh_key  = $server['ssh_key_path'] ?? "/root/.ssh/id_rsa"; // chemin clé privée dans container
+// --- Variables PC cible ---
+$pc_ip   = $server['pc_ip'] ?? "192.168.1.22";
+$pc_mac  = $server['pc_mac'] ?? "2c:f0:5d:7f:e3:2b";
+$pc_user = $server['pc_user'] ?? "aleix";
+$ssh_key = "/var/www/.ssh/id_rsa";
 
-// --- Si start : vérifier si PC est ON, sinon envoyer WOL --- //
-if ($action === 'start') {
-    if (!ping_pc($pc_ip)) {
-        send_wol($pc_mac, "192.168.1.255");
-        $max_wait = 60; // attendre jusqu'à 60s
-        $elapsed = 0;
-        while ($elapsed < $max_wait && !ping_pc($pc_ip)) {
-            sleep(5);
-            $elapsed += 5;
-        }
-        if ($elapsed >= $max_wait) {
-            echo json_encode(["status"=>"error","message"=>"Le PC n'a pas démarré après WOL"]);
-            exit;
-        }
+$debug = ["wol" => null, "ssh" => null];
+
+// --- Vérifier si la tour est allumée et envoyer WOL si nécessaire ---
+if ($action === 'start' && !ping_pc($pc_ip)) {
+    $wol_sent = send_wol($pc_mac, "192.168.1.255");
+    $debug["wol"] = $wol_sent ? "WOL envoyé" : "WOL échoué";
+
+    $max_wait = 60;
+    $elapsed = 0;
+    while ($elapsed < $max_wait && !ping_pc($pc_ip)) {
+        sleep(5);
+        $elapsed += 5;
+    }
+    if ($elapsed >= $max_wait) {
+        echo json_encode(["status" => "error", "message" => "Le PC n'a pas démarré après WOL", "debug" => $debug]);
+        exit;
     }
 }
 
-// --- Lancer le script Python via SSH --- //
-$remote_script = $action === 'start' ? '/home/pi/start_server.py' : '/home/pi/stop_server.py';
-$ssh_cmd = "ssh -i " . escapeshellarg($ssh_key) . " -o StrictHostKeyChecking=no $ssh_user@$pc_ip 'python3 $remote_script'";
+// --- Vérifier si l'API Python est active ---
+$api_alive = false;
+$check_url = "http://$pc_ip:8080/status/$server_id";
+$ch = curl_init($check_url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_TIMEOUT, 2);
+curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
+$response = curl_exec($ch);
+$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+curl_close($ch);
+if ($httpCode === 200 && $response) $api_alive = true;
 
-exec($ssh_cmd, $output, $status);
+// --- Si l'API Python inactive et action=start, lancer Python via SSH ---
+if (!$api_alive && $action === 'start') {
+    // Ici, on utilise sshtour.php directement pour exécuter la commande
+    $cmd = "nohup python3 /chemin/vers/server_api.py > server.log 2>&1 &";
+    $ssh = 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ' 
+         . escapeshellarg($ssh_key) . ' ' . escapeshellarg("$pc_user@$pc_ip") 
+         . ' ' . escapeshellarg($cmd);
+    $ssh_output = shell_exec($ssh);
+    $debug["ssh"] = $ssh_output;
 
-if ($status !== 0) {
-    echo json_encode([
-        "status" => "error",
-        "message" => "Impossible d'exécuter le script Python via SSH",
-        "output" => $output
-    ]);
+    // Attendre que l'API réponde
+    $elapsed = 0;
+    $max_wait = 20;
+    while ($elapsed < $max_wait && !$api_alive) {
+        sleep(2);
+        $ch = curl_init($check_url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 2);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        if ($httpCode === 200 && $response) $api_alive = true;
+        $elapsed += 2;
+    }
+
+    if (!$api_alive) {
+        echo json_encode(["status" => "error", "message" => "Impossible de lancer l'API Python via SSH", "debug" => $debug]);
+        exit;
+    }
+}
+
+// --- Envoi de la commande de l'utilisateur à l'API Python ---
+$API_BASE = "http://$pc_ip:8080";
+$endpoint = ($action === "start") ? "/start" : "/stop";
+$API_URL = $API_BASE . $endpoint;
+$postData = json_encode(["server_id" => $server_id]);
+
+$ch = curl_init($API_URL);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
+$response = curl_exec($ch);
+$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+curl_close($ch);
+
+if ($httpCode !== 200 || !$response) {
+    echo json_encode(["status" => "error", "message" => "Impossible de contacter l'API Python", "debug" => $debug]);
     exit;
 }
 
-echo json_encode([
-    "status" => "success",
-    "message" => "Action '$action' exécutée avec succès",
-    "output" => $output
-]);
+$resData = json_decode($response, true);
+if (!$resData) $resData = ["status" => "error", "message" => "Réponse invalide de l'API Python"];
+
+$resData["debug"] = $debug;
+echo json_encode($resData);
