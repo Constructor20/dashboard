@@ -88,58 +88,69 @@ if ($httpCode === 200 && $response) $api_alive = true;
 
 // --- Si l'API Python inactive et action=start, lancer Python via SSH ---
 if (!$api_alive && $action === 'start') {
-    // Ici, on utilise sshtour.php directement pour exécuter la commande
-    $cmd = "nohup python3 /chemin/vers/server_api.py > server.log 2>&1 &";
-    $ssh = 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ' 
-         . escapeshellarg($ssh_key) . ' ' . escapeshellarg("$pc_user@$pc_ip") 
-         . ' ' . escapeshellarg($cmd);
-    $ssh_output = shell_exec($ssh);
-    $debug["ssh"] = $ssh_output;
+    
+    if (!wait_for_ssh($pc_ip, 22, 120)) {
+        echo json_encode(["status" => "error", "message" => "SSH non dispo après 120s", "debug" => $debug]);
+        exit;
+    }
+    
+    $result = ssh_start_api();
 
-    // Attendre que l'API réponde
-    $elapsed = 0;
-    $max_wait = 20;
-    while ($elapsed < $max_wait && !$api_alive) {
-        sleep(2);
-        $ch = curl_init($check_url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 2);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-        if ($httpCode === 200 && $response) $api_alive = true;
-        $elapsed += 2;
+    if ($result["success"]) {
+        $debug["ssh"] = "SSH OK (exit={$result["exitCode"]}) : " . $result["stdout"];
+    } else {
+        $debug["ssh"] = "SSH FAIL (exit={$result["exitCode"]}) : " . $result["stderr"];
     }
 
-    if (!$api_alive) {
-        echo json_encode(["status" => "error", "message" => "Impossible de lancer l'API Python via SSH", "debug" => $debug]);
-        exit;
+    // Attente que l’API soit prête
+    $max_wait = 30; // secondes max
+    $elapsed = 0;
+    while ($elapsed < $max_wait) {
+        $ch = curl_init("http://$pc_ip:8080/status/$server_id");
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 2);
+        $resp = curl_exec($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($code === 200 && $resp) {
+            $api_alive = true;
+            break;
+        }
+        sleep(2);
+        $elapsed += 2;
     }
 }
 
-// --- Envoi de la commande de l'utilisateur à l'API Python ---
-$API_BASE = "http://$pc_ip:8080";
-$endpoint = ($action === "start") ? "/start" : "/stop";
-$API_URL = $API_BASE . $endpoint;
-$postData = json_encode(["server_id" => $server_id]);
+if ($api_alive) {
+    // --- Envoi de la commande de l'utilisateur à l'API Python ---
+    $API_BASE = "http://$pc_ip:8080";
+    $endpoint = ($action === "start") ? "/start" : "/stop";
+    $API_URL = $API_BASE . $endpoint;
+    $postData = json_encode(["server_id" => $server_id]);
 
-$ch = curl_init($API_URL);
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_POST, true);
-curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
-$response = curl_exec($ch);
-$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-curl_close($ch);
+    $ch = curl_init($API_URL);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
 
-if ($httpCode !== 200 || !$response) {
-    echo json_encode(["status" => "error", "message" => "Impossible de contacter l'API Python", "debug" => $debug]);
+    if ($httpCode !== 200 || !$response) {
+        echo json_encode(["status" => "error", "message" => "Impossible de contacter l'API Python", "debug" => $debug]);
+        exit;
+    }
+
+    $resData = json_decode($response, true);
+    if (!$resData) $resData = ["status" => "error", "message" => "Réponse invalide de l'API Python"];
+
+    $resData["debug"] = $debug;
+    echo json_encode($resData);
+    exit;
+} else {
+    echo json_encode(["status" => "error", "message" => "API Python pas prête après $max_wait secondes", "debug" => $debug]);
     exit;
 }
 
-$resData = json_decode($response, true);
-if (!$resData) $resData = ["status" => "error", "message" => "Réponse invalide de l'API Python"];
-
-$resData["debug"] = $debug;
-echo json_encode($resData);
