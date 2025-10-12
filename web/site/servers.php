@@ -2,15 +2,12 @@
 include 'auth.php';
 include 'includes/db.php'; // PDO $pdo
 
-// Vérifie que l'utilisateur est connecté
 $user_id = $_SESSION['user_id'];
 
 // --- Récupérer les serveurs accessibles à l'utilisateur ---
 if ($user_id == 1) {
-    // Admin : voir tous les serveurs
     $stmt = $pdo->query("SELECT * FROM servers");
 } else {
-    // Utilisateur normal : voir uniquement les serveurs pour lesquels il a une permission can_view
     $stmt = $pdo->prepare("
         SELECT s.* 
         FROM servers s
@@ -24,26 +21,124 @@ $servers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <?php include 'navbar.php'; ?>
     <meta charset="UTF-8">
-    <title>Gestion Serveurs Minecraft</title>   
+    <title>Gestion Serveurs Minecraft</title>
+    <?php include 'navbar.php'; ?>
     <style>
-        body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #1e3c72, #2a5298); color: white; min-height: 100vh; margin: 0; text-align: center; padding-bottom: 60px; }
-        h1 { margin-top: 80px; font-size: 32px; color: #ffd700; text-shadow: 0 2px 6px rgba(0,0,0,0.4); }
-        .server { background: rgba(255,255,255,0.1); margin: 20px auto; padding: 20px 25px; border-radius: 20px; max-width: 500px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: flex-start; gap: 15px; transition: transform 0.2s, background 0.3s; }
-        .server:hover { transform: translateY(-3px); background: rgba(255,255,255,0.2); cursor: pointer; }
-        .status { width: 18px; height: 18px; border-radius: 50%; background: red; }
-        .status.green { background: #4ade80; }
-        .status.red { background: #f87171; }
-        .players { font-weight: bold; color: #fff; min-width: 50px; }
-        .server a { text-decoration: none; color: #fff; font-weight: bold; font-size: 18px; }
+        /* 🌌 Style global cohérent avec le dashboard */
+        body {
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            background: radial-gradient(circle at top left, #0f172a, #1e293b);
+            color: #f8fafc;
+            margin: 0;
+            min-height: 100vh;
+            padding: 0;
+        }
+
+        h1 {
+            margin-top: 80px;
+            font-size: 32px;
+            color: #38bdf8;
+            text-align: center;
+            text-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+        }
+
+        /* 🧱 Carte serveur */
+        .server {
+            background: radial-gradient(circle at top left, #1e293b, #0f172a);
+            margin: 20px auto;
+            padding: 20px 25px;
+            border-radius: 16px;
+            max-width: 600px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 18px;
+            transition: all 0.25s ease;
+            border: 1px solid #334155;
+            box-shadow: 0 0 20px rgba(15,23,42,0.6);
+            cursor: pointer;
+        }
+
+        .server:hover {
+            transform: translateY(-3px);
+            background: radial-gradient(circle at bottom right, #1e3a8a, #1e293b);
+            border-color: #3b82f6;
+            box-shadow: 0 0 25px rgba(59,130,246,0.4);
+        }
+
+        /* 🟢 Statut serveur */
+        .status {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+        }
+        .status.green {
+            background: linear-gradient(90deg, #22c55e, #16a34a);
+            box-shadow: 0 0 10px rgba(34,197,94,0.6);
+        }
+        .status.red {
+            background: linear-gradient(90deg, #ef4444, #dc2626);
+            box-shadow: 0 0 10px rgba(239,68,68,0.6);
+        }
+
+        /* 👥 Joueurs connectés */
+        .players {
+            font-weight: bold;
+            color: #e2e8f0;
+            font-size: 14px;
+            min-width: 70px;
+        }
+
+        /* 🔗 Nom du serveur */
+        .server a {
+            color: #93c5fd;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 18px;
+            letter-spacing: 0.3px;
+            transition: color 0.2s, text-shadow 0.2s;
+        }
+        .server a:hover {
+            color: #60a5fa;
+            text-shadow: 0 0 8px rgba(96,165,250,0.6);
+        }
+
+        /* 🧩 Message “aucun serveur” */
+        .no-server {
+            text-align: center;
+            margin-top: 100px;
+            font-size: 18px;
+            color: #94a3b8;
+            background: rgba(148,163,184,0.05);
+            display: inline-block;
+            padding: 12px 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(148,163,184,0.2);
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+        }
+
+        /* 📱 Responsive */
+        @media (max-width: 600px) {
+            .server {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+                text-align: left;
+                padding: 18px;
+            }
+            .players {
+                font-size: 13px;
+            }
+        }
     </style>
 </head>
 <body>
     <h1>Gestion des Serveurs Minecraft</h1>
 
     <?php if (empty($servers)): ?>
-        <p>Aucun serveur accessible pour votre compte.</p>
+        <div class="no-server">❌ Aucun serveur accessible pour votre compte.</div>
     <?php else: ?>
         <?php foreach ($servers as $srv): 
             $online = $srv['online'] == 1;
