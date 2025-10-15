@@ -25,14 +25,12 @@ $servers = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <title>Gestion Serveurs Minecraft</title>
     <?php include 'navbar.php'; ?>
     <style>
-        /* 🌌 Style global cohérent avec le dashboard */
         body {
             font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
             background: radial-gradient(circle at top left, #0f172a, #1e293b);
             color: #f8fafc;
             margin: 0;
             min-height: 100vh;
-            padding: 0;
         }
 
         h1 {
@@ -43,7 +41,6 @@ $servers = $stmt->fetchAll(PDO::FETCH_ASSOC);
             text-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
         }
 
-        /* 🧱 Carte serveur */
         .server {
             background: radial-gradient(circle at top left, #1e293b, #0f172a);
             margin: 20px auto;
@@ -67,7 +64,6 @@ $servers = $stmt->fetchAll(PDO::FETCH_ASSOC);
             box-shadow: 0 0 25px rgba(59,130,246,0.4);
         }
 
-        /* 🟢 Statut serveur */
         .status {
             width: 16px;
             height: 16px;
@@ -83,7 +79,6 @@ $servers = $stmt->fetchAll(PDO::FETCH_ASSOC);
             box-shadow: 0 0 10px rgba(239,68,68,0.6);
         }
 
-        /* 👥 Joueurs connectés */
         .players {
             font-weight: bold;
             color: #e2e8f0;
@@ -91,7 +86,6 @@ $servers = $stmt->fetchAll(PDO::FETCH_ASSOC);
             min-width: 70px;
         }
 
-        /* 🔗 Nom du serveur */
         .server a {
             color: #93c5fd;
             text-decoration: none;
@@ -105,7 +99,6 @@ $servers = $stmt->fetchAll(PDO::FETCH_ASSOC);
             text-shadow: 0 0 8px rgba(96,165,250,0.6);
         }
 
-        /* 🧩 Message “aucun serveur” */
         .no-server {
             text-align: center;
             margin-top: 100px;
@@ -119,13 +112,11 @@ $servers = $stmt->fetchAll(PDO::FETCH_ASSOC);
             box-shadow: 0 0 15px rgba(0,0,0,0.2);
         }
 
-        /* 📱 Responsive */
         @media (max-width: 600px) {
             .server {
                 flex-direction: column;
                 align-items: flex-start;
                 gap: 10px;
-                text-align: left;
                 padding: 18px;
             }
             .players {
@@ -140,19 +131,63 @@ $servers = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <?php if (empty($servers)): ?>
         <div class="no-server">❌ Aucun serveur accessible pour votre compte.</div>
     <?php else: ?>
-        <?php foreach ($servers as $srv): 
-            $online = $srv['online'] == 1;
-            $players = $online 
-                ? (isset($srv['current_players']) ? "{$srv['current_players']}/{$srv['max_players']}" : "0/{$srv['max_players']}")
-                : "0/{$srv['max_players']}";
-            $link = "console.php?server=" . $srv['id'];
-        ?>
-            <div class="server" onclick="window.location.href='<?= $link ?>'">
-                <span class="status <?= $online ? 'green' : 'red'; ?>"></span>
-                <span class="players"><?= $players ?></span>
-                <a href="<?= $link ?>"><?= htmlspecialchars($srv["name"]); ?></a>
+        <?php foreach ($servers as $srv): ?>
+            <div class="server" id="server-<?= $srv['id'] ?>" onclick="window.location.href='console.php?server=<?= $srv['id'] ?>'">
+                <span class="status red"></span>
+                <span class="players">--/--</span>
+                <a href="console.php?server=<?= $srv['id'] ?>"><?= htmlspecialchars($srv["name"]); ?></a>
             </div>
         <?php endforeach; ?>
     <?php endif; ?>
+
+    <script>
+        async function updateServerStatus(serverId) {
+            try {
+                const response = await fetch(`includes/api_console.php?server=${serverId}`);
+                const data = await response.json();
+
+                const serverDiv = document.getElementById(`server-${serverId}`);
+                if (!serverDiv) return;
+
+                const statusDot = serverDiv.querySelector(".status");
+                const playersSpan = serverDiv.querySelector(".players");
+
+                if (data.status === "ok") {
+                    // Pastille verte/rouge selon running
+                    if (data.running) {
+                        statusDot.classList.remove("red");
+                        statusDot.classList.add("green");
+                    } else {
+                        statusDot.classList.remove("green");
+                        statusDot.classList.add("red");
+                    }
+
+                    // Joueurs connectés
+                    playersSpan.textContent = `${data.current_players}/${data.max_players}`;
+                } else {
+                    // Si erreur API
+                    statusDot.classList.remove("green");
+                    statusDot.classList.add("red");
+                    playersSpan.textContent = "--/--";
+                }
+            } catch (e) {
+                console.warn(`Erreur de récupération du statut du serveur ${serverId}:`, e);
+            }
+        }
+
+        // Actualiser tous les serveurs
+        function refreshAllServers() {
+            const serverDivs = document.querySelectorAll(".server[id^='server-']");
+            serverDivs.forEach(div => {
+                const id = div.id.replace("server-", "");
+                updateServerStatus(id);
+            });
+        }
+
+        // Lancer au chargement + toutes les 10s
+        refreshAllServers();
+        setInterval(refreshAllServers, 10000);
+
+    </script>
 </body>
 </html>

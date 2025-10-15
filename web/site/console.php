@@ -236,6 +236,79 @@ $players = $online ? (isset($server['current_players'])?"{$server['current_playe
     border-radius: 6px;
     display: inline-block;
     }
+    /* === Section CPU/RAM === */
+    #server-stats {
+        position: fixed;
+        bottom: 15px;           /* espace par rapport au bas de l’écran */
+        left: 50%;              /* centré horizontalement */
+        transform: translateX(-50%); /* recentrage parfait */
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 25px;
+        padding: 15px 25px;
+        background: rgba(15, 23, 42, 0.85);
+        border: 1px solid #334155;
+        border-radius: 12px;
+        box-shadow: 0 0 25px rgba(30, 64, 175, 0.4);
+        z-index: 1000;          /* pour rester au-dessus du reste */
+        opacity: 0;
+        animation: fadeInUp 0.8s ease-out forwards;
+    }
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translate(-50%, 20px); }
+        to { opacity: 1; transform: translate(-50%, 0); }
+    }
+
+    .stat {
+        flex: 1 1 180px;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        color: #e2e8f0;
+    }
+
+    .stat .label {
+        font-weight: bold;
+        font-size: 15px;
+        color: #93c5fd;
+        margin-bottom: 6px;
+    }
+
+    .stat .bar {
+        width: 220px;
+        height: 14px;
+        background: #1e293b;
+        border-radius: 6px;
+        overflow: hidden;
+        box-shadow: inset 0 0 8px rgba(0,0,0,0.4);
+    }
+
+    .stat .fill {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, #22c55e, #16a34a);
+        border-radius: 6px;
+        transition: width 0.4s ease-in-out, background 0.3s ease;
+    }
+
+    .stat .value {
+        font-weight: bold;
+        font-size: 14px;
+        margin-top: 6px;
+    }
+
+    /* Couleur selon charge */
+    .fill.low {
+        background: linear-gradient(90deg, #22c55e, #16a34a);
+    }
+    .fill.medium {
+        background: linear-gradient(90deg, #facc15, #eab308);
+    }
+    .fill.high {
+        background: linear-gradient(90deg, #ef4444, #dc2626);
+    }
+
 </style>
 
 </head>
@@ -247,6 +320,7 @@ $players = $online ? (isset($server['current_players'])?"{$server['current_playe
 <?php if($permissions["can_start"]): ?><button onclick="sendAction('start')">Démarrer</button><?php endif; ?>
 <?php if($permissions["can_stop"]): ?><button onclick="sendAction('stop')">Arrêter</button><?php endif; ?>
 </div>
+<!-- Zone rouge pour erreurs -->
 <div id="action-status"></div>
 
 <?php if($permissions["can_console"]): ?>
@@ -256,7 +330,18 @@ $players = $online ? (isset($server['current_players'])?"{$server['current_playe
 <button onclick="sendCommand()">Envoyer</button>
 </div>
 <?php endif; ?>
-
+<div id="server-stats">
+    <div class="stat">
+        <div class="label">CPU</div>
+        <div class="bar"><div class="fill" id="cpu-bar"></div></div>
+        <div class="value" id="cpu-value">0%</div>
+    </div>
+    <div class="stat">
+        <div class="label">RAM</div>
+        <div class="bar"><div class="fill" id="ram-bar"></div></div>
+        <div class="value" id="ram-value">0%</div>
+    </div>
+</div>
 <script>
 const serverId = <?= $server_id ?>;
 
@@ -269,6 +354,11 @@ function fetchConsole() {
             const statusSpan = document.querySelector(".status span");
             const playersDiv = document.querySelector(".players");
 
+            if (data.status !== "ok") {
+                console.error("Erreur API:", data.message);
+                return;
+            }
+
             // --- Afficher les logs ---
             if (box && data.logs) {
                 const safeLogs = data.logs.map(l =>
@@ -280,19 +370,42 @@ function fetchConsole() {
                 box.scrollTop = box.scrollHeight;
             }
 
-            // --- Mettre à jour le statut ---
+            // --- Statut serveur ---
             if (statusSpan) {
-                statusSpan.className = data.online ? "green" : "red";
-                statusSpan.textContent = data.online ? "En ligne" : "Hors ligne";
+                statusSpan.className = data.running ? "green" : "red";
+                statusSpan.textContent = data.running ? "Démarré" : "Arrêté";
             }
 
-            // --- Mettre à jour le nombre de joueurs ---
-            if (playersDiv && data.players) {
-                playersDiv.textContent = "Joueurs connectés: " + data.players;
+            // --- Joueurs ---
+            if (playersDiv) {
+                playersDiv.textContent = `Joueurs connectés: ${data.current_players}/${data.max_players}`;
             }
+
+            // --- Optionnel : afficher CPU/RAM ---
+            // --- Affichage visuel CPU/RAM ---
+            const cpuBar = document.getElementById("cpu-bar");
+            const ramBar = document.getElementById("ram-bar");
+            const cpuValue = document.getElementById("cpu-value");
+            const ramValue = document.getElementById("ram-value");
+
+            if (cpuBar && ramBar && data.cpu !== undefined && data.ram !== undefined) {
+                const cpu = Math.min(100, Math.max(0, data.cpu));
+                const ram = Math.min(100, Math.max(0, data.ram));
+
+                cpuBar.style.width = cpu + "%";
+                ramBar.style.width = ram + "%";
+                cpuValue.textContent = cpu + "%";
+                ramValue.textContent = ram + "%";
+
+                // Couleurs dynamiques
+                cpuBar.className = "fill " + (cpu < 50 ? "low" : cpu < 80 ? "medium" : "high");
+                ramBar.className = "fill " + (ram < 50 ? "low" : ram < 80 ? "medium" : "high");
+            }
+
         })
         .catch(err => console.error("Erreur console:", err));
 }
+
 
 
 // --- Envoyer commande ---
