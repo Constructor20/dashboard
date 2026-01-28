@@ -2,15 +2,12 @@
 include 'auth.php';
 include 'includes/db.php'; // PDO $pdo
 
-// Vérifie que l'utilisateur est connecté
 $user_id = $_SESSION['user_id'];
 
 // --- Récupérer les serveurs accessibles à l'utilisateur ---
 if ($user_id == 1) {
-    // Admin : voir tous les serveurs
     $stmt = $pdo->query("SELECT * FROM servers");
 } else {
-    // Utilisateur normal : voir uniquement les serveurs pour lesquels il a une permission can_view
     $stmt = $pdo->prepare("
         SELECT s.* 
         FROM servers s
@@ -24,40 +21,173 @@ $servers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <?php include 'navbar.php'; ?>
     <meta charset="UTF-8">
-    <title>Gestion Serveurs Minecraft</title>   
+    <title>Gestion Serveurs Minecraft</title>
+    <?php include 'navbar.php'; ?>
     <style>
-        body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #1e3c72, #2a5298); color: white; min-height: 100vh; margin: 0; text-align: center; padding-bottom: 60px; }
-        h1 { margin-top: 80px; font-size: 32px; color: #ffd700; text-shadow: 0 2px 6px rgba(0,0,0,0.4); }
-        .server { background: rgba(255,255,255,0.1); margin: 20px auto; padding: 20px 25px; border-radius: 20px; max-width: 500px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: flex-start; gap: 15px; transition: transform 0.2s, background 0.3s; }
-        .server:hover { transform: translateY(-3px); background: rgba(255,255,255,0.2); cursor: pointer; }
-        .status { width: 18px; height: 18px; border-radius: 50%; background: red; }
-        .status.green { background: #4ade80; }
-        .status.red { background: #f87171; }
-        .players { font-weight: bold; color: #fff; min-width: 50px; }
-        .server a { text-decoration: none; color: #fff; font-weight: bold; font-size: 18px; }
+        body {
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            background: radial-gradient(circle at top left, #0f172a, #1e293b);
+            color: #f8fafc;
+            margin: 0;
+            min-height: 100vh;
+        }
+
+        h1 {
+            margin-top: 80px;
+            font-size: 32px;
+            color: #38bdf8;
+            text-align: center;
+            text-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+        }
+
+        .server {
+            background: radial-gradient(circle at top left, #1e293b, #0f172a);
+            margin: 20px auto;
+            padding: 20px 25px;
+            border-radius: 16px;
+            max-width: 600px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 18px;
+            transition: all 0.25s ease;
+            border: 1px solid #334155;
+            box-shadow: 0 0 20px rgba(15,23,42,0.6);
+            cursor: pointer;
+        }
+
+        .server:hover {
+            transform: translateY(-3px);
+            background: radial-gradient(circle at bottom right, #1e3a8a, #1e293b);
+            border-color: #3b82f6;
+            box-shadow: 0 0 25px rgba(59,130,246,0.4);
+        }
+
+        .status {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+        }
+        .status.green {
+            background: linear-gradient(90deg, #22c55e, #16a34a);
+            box-shadow: 0 0 10px rgba(34,197,94,0.6);
+        }
+        .status.red {
+            background: linear-gradient(90deg, #ef4444, #dc2626);
+            box-shadow: 0 0 10px rgba(239,68,68,0.6);
+        }
+
+        .players {
+            font-weight: bold;
+            color: #e2e8f0;
+            font-size: 14px;
+            min-width: 70px;
+        }
+
+        .server a {
+            color: #93c5fd;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 18px;
+            letter-spacing: 0.3px;
+            transition: color 0.2s, text-shadow 0.2s;
+        }
+        .server a:hover {
+            color: #60a5fa;
+            text-shadow: 0 0 8px rgba(96,165,250,0.6);
+        }
+
+        .no-server {
+            text-align: center;
+            margin-top: 100px;
+            font-size: 18px;
+            color: #94a3b8;
+            background: rgba(148,163,184,0.05);
+            display: inline-block;
+            padding: 12px 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(148,163,184,0.2);
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+        }
+
+        @media (max-width: 600px) {
+            .server {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+                padding: 18px;
+            }
+            .players {
+                font-size: 13px;
+            }
+        }
     </style>
 </head>
 <body>
     <h1>Gestion des Serveurs Minecraft</h1>
 
     <?php if (empty($servers)): ?>
-        <p>Aucun serveur accessible pour votre compte.</p>
+        <div class="no-server">❌ Aucun serveur accessible pour votre compte.</div>
     <?php else: ?>
-        <?php foreach ($servers as $srv): 
-            $online = $srv['online'] == 1;
-            $players = $online 
-                ? (isset($srv['current_players']) ? "{$srv['current_players']}/{$srv['max_players']}" : "0/{$srv['max_players']}")
-                : "0/{$srv['max_players']}";
-            $link = "console.php?server=" . $srv['id'];
-        ?>
-            <div class="server" onclick="window.location.href='<?= $link ?>'">
-                <span class="status <?= $online ? 'green' : 'red'; ?>"></span>
-                <span class="players"><?= $players ?></span>
-                <a href="<?= $link ?>"><?= htmlspecialchars($srv["name"]); ?></a>
+        <?php foreach ($servers as $srv): ?>
+            <div class="server" id="server-<?= $srv['id'] ?>" onclick="window.location.href='console.php?server=<?= $srv['id'] ?>'">
+                <span class="status red"></span>
+                <span class="players">--/--</span>
+                <a href="console.php?server=<?= $srv['id'] ?>"><?= htmlspecialchars($srv["name"]); ?></a>
             </div>
         <?php endforeach; ?>
     <?php endif; ?>
+
+    <script>
+        async function updateServerStatus(serverId) {
+            try {
+                const response = await fetch(`includes/api_console.php?server=${serverId}`);
+                const data = await response.json();
+
+                const serverDiv = document.getElementById(`server-${serverId}`);
+                if (!serverDiv) return;
+
+                const statusDot = serverDiv.querySelector(".status");
+                const playersSpan = serverDiv.querySelector(".players");
+
+                if (data.status === "ok") {
+                    // Pastille verte/rouge selon running
+                    if (data.running) {
+                        statusDot.classList.remove("red");
+                        statusDot.classList.add("green");
+                    } else {
+                        statusDot.classList.remove("green");
+                        statusDot.classList.add("red");
+                    }
+
+                    // Joueurs connectés
+                    playersSpan.textContent = `${data.current_players}/${data.max_players}`;
+                } else {
+                    // Si erreur API
+                    statusDot.classList.remove("green");
+                    statusDot.classList.add("red");
+                    playersSpan.textContent = "--/--";
+                }
+            } catch (e) {
+                console.warn(`Erreur de récupération du statut du serveur ${serverId}:`, e);
+            }
+        }
+
+        // Actualiser tous les serveurs
+        function refreshAllServers() {
+            const serverDivs = document.querySelectorAll(".server[id^='server-']");
+            serverDivs.forEach(div => {
+                const id = div.id.replace("server-", "");
+                updateServerStatus(id);
+            });
+        }
+
+        // Lancer au chargement + toutes les 10s
+        refreshAllServers();
+        setInterval(refreshAllServers, 10000);
+
+    </script>
 </body>
 </html>
