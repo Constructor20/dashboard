@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="fr" data-anim="off">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Services Internes</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0a0e17;
+      color: #b8d4f0;
+      font-family: 'Rajdhani', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        linear-gradient(rgba(0, 212, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 212, 255, 0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+    h1 {
+      font-family: 'Orbitron', monospace;
+      font-size: 20px;
+      color: #00d4ff;
+      letter-spacing: 6px;
+      text-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+      margin-bottom: 0.5rem;
+    }
+    .subtitle {
+      font-size: 13px;
+      color: rgba(0, 212, 255, 0.4);
+      letter-spacing: 2px;
+      margin-bottom: 2rem;
+    }
+    .warning {
+      background: rgba(255, 107, 53, 0.1);
+      border: 1px solid rgba(255, 107, 53, 0.3);
+      border-radius: 6px;
+      padding: 12px 20px;
+      margin-bottom: 2rem;
+      font-size: 13px;
+      color: #ff8a5c;
+      letter-spacing: 1px;
+      text-align: center;
+      max-width: 500px;
+    }
+    .service-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 100%;
+      max-width: 500px;
+    }
+    .service-card {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 20px;
+      background: rgba(0, 15, 35, 0.85);
+      border: 1px solid rgba(0, 212, 255, 0.12);
+      border-radius: 6px;
+      transition: all 0.3s;
+    }
+    .service-card:hover {
+      border-color: rgba(0, 212, 255, 0.3);
+      box-shadow: 0 0 20px rgba(0, 212, 255, 0.05);
+    }
+    .service-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .service-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: #fff;
+      letter-spacing: 1px;
+    }
+    .service-detail {
+      font-size: 12px;
+      color: rgba(255,255,255,0.4);
+      letter-spacing: 1px;
+    }
+    .service-links {
+      display: flex;
+      gap: 8px;
+    }
+    .service-links a {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      text-decoration: none;
+      letter-spacing: 1px;
+      transition: all 0.3s;
+      font-family: 'Rajdhani', sans-serif;
+    }
+    .link-ts {
+      background: rgba(0, 212, 255, 0.08);
+      border: 1px solid rgba(0, 212, 255, 0.2);
+      color: #00d4ff;
+    }
+    .link-ts:hover {
+      background: rgba(0, 212, 255, 0.2);
+    }
+    .link-local {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.5);
+    }
+    .link-local:hover {
+      background: rgba(255,255,255,0.1);
+    }
+    .back-link {
+      margin-top: 2rem;
+      font-size: 13px;
+      letter-spacing: 2px;
+    }
+    .back-link a {
+      color: rgba(0, 212, 255, 0.5);
+      text-decoration: none;
+      transition: color 0.3s;
+    }
+    .back-link a:hover {
+      color: #00d4ff;
+    }
+    @media (max-width: 500px) {
+      .service-card { flex-direction: column; gap: 10px; align-items: flex-start; }
+      .service-links { width: 100%; }
+      .service-links a { flex: 1; justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+  <h1>SERVICES</h1>
+  <p class="subtitle">Accès réservé — Réseau Tailscale uniquement</p>
+  <div class="warning">
+    ⚠ Ces services ne sont accessibles que via le réseau Tailscale.<br>
+    Connecte-toi à Tailscale pour y accéder.
+  </div>
+  <div class="service-grid">
+    <div class="service-card">
+      <div class="service-info">
+        <span class="service-name">Portainer</span>
+        <span class="service-detail">Gestion Docker • Port 9000</span>
+      </div>
+      <div class="service-links">
+        <a href="http://100.100.113.63:9000" target="_blank" class="link-ts">Tailscale →</a>
+      </div>
+    </div>
+    <div class="service-card">
+      <div class="service-info">
+        <span class="service-name">Adminer</span>
+        <span class="service-detail">Administration BDD • Port —</span>
+      </div>
+      <div class="service-links">
+        <a href="#" class="link-ts" style="opacity:0.4">Indisponible</a>
+      </div>
+    </div>
+    <div class="service-card">
+      <div class="service-info">
+        <span class="service-name">File Browser</span>
+        <span class="service-detail">Gestion fichiers • Port 8102</span>
+      </div>
+      <div class="service-links">
+        <a href="http://100.100.113.63:8102" target="_blank" class="link-ts">Tailscale →</a>
+      </div>
+    </div>
+    <div class="service-card">
+      <div class="service-info">
+        <span class="service-name">Minecraft Panel</span>
+        <span class="service-detail">Panneau de gestion • Port 8111</span>
+      </div>
+      <div class="service-links">
+        <a href="http://100.100.113.63:8111" target="_blank" class="link-ts">Tailscale →</a>
+      </div>
+    </div>
+    <div class="service-card">
+      <div class="service-info">
+        <span class="service-name">Laravel App</span>
+        <span class="service-detail">Application web • Port 8001</span>
+      </div>
+      <div class="service-links">
+        <a href="http://100.100.113.63:8001" target="_blank" class="link-ts">Tailscale →</a>
+      </div>
+    </div>
+    <div class="service-card">
+      <div class="service-info">
+        <span class="service-name">E-commerce</span>
+        <span class="service-detail">Boutique en ligne • Port 8105</span>
+      </div>
+      <div class="service-links">
+        <a href="http://100.100.113.63:8105" target="_blank" class="link-ts">Tailscale →</a>
+      </div>
+    </div>
+    <div class="service-card">
+      <div class="service-info">
+        <span class="service-name">MySQL</span>
+        <span class="service-detail">Base de données • Port 8005 (interne)</span>
+      </div>
+      <div class="service-links">
+        <span class="link-local">Interne uniquement</span>
+      </div>
+    </div>
+  </div>
+  <div class="back-link">
+    <a href="/">← Retour au dashboard</a>
+  </div>
+</body>
+</html>

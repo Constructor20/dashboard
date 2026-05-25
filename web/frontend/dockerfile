@@ -1,0 +1,23 @@
+FROM node:20-alpine
+
+# Crée le dossier
+WORKDIR /app
+
+# Copie package.json et package-lock.json
+COPY package*.json ./
+
+# Installe les dépendances
+RUN npm install
+
+# Installer Tailwind si ce n'est pas déjà dans package.json
+RUN npm install -D tailwindcss postcss autoprefixer
+
+
+# Initialise Tailwind (si déjà fait dans package.json, cette ligne peut être supprimée)
+RUN npx tailwindcss init -p
+
+# Copie tout le reste du code
+COPY . .
+
+# Commande par défaut (mode dev)
+CMD ["npm", "run", "dev"]

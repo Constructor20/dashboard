@@ -1,0 +1,8 @@
+[
+  {"title": "01net.com", "url": "https://www.01net.com/feed/"},
+  {"title": "ZDNet Actualites", "url": "https://www.zdnet.fr/feeds/rss/actualites/"},
+  {"title": "Developpez.com", "url": "http://www.developpez.com/rss.php"},
+  {"title": "Le Monde Informatique", "url": "http://www.lemondeinformatique.fr/flux-rss/rss.xml"},
+  {"title": "JDN", "url": "http://www.journaldunet.com/rss/"},
+  {"title": "Securite Info", "url": "http://www.lemondeinformatique.fr/flux-rss/thematique/securite/rss.xml"}
+]

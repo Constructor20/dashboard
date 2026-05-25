@@ -1,0 +1,44 @@
+# Sensitive / secrets
+certificatssl/
+mosquitto/
+.env
+*.env
+*.key
+*.pem
+*.cert
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-ssr/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Docker
+docker-compose*.yml
+
+# Vite cache
+.vite/
+
+# Scripts with secrets
+ddns-update.sh
+automate.sh
+
+# Portfolio data
+web/frontend/public/portfolio/data/news.json
+web/frontend/public/data/news.json
